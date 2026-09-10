@@ -1,7 +1,7 @@
 <div align="center">
 
 <p>
-  <img src="./assets/pawprint-logo.png" alt="PawPrint Logo" width="180">
+  <img src="./PawPrint%20logo.jpeg" alt="PawPrint Logo" width="180">
 </p>
 
 <h1>🐾 PawPrint</h1>
@@ -11,6 +11,8 @@
 <p>
   <strong>Care for their health. Keep their memories. Stay connected — even offline.</strong>
 </p>
+
+<br>
 
 <p>
   <a href="#-features">✨ Features</a> •
@@ -37,6 +39,8 @@ Users can continue accessing and updating important pet information even without
 ---
 
 # ✨ Features
+
+PawPrint brings everyday pet care into one connected experience.
 
 <table>
 <tr>
