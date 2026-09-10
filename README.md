@@ -1,6 +1,30 @@
-# 🐾 PawPrint
+<div align="center">
 
-### Offline-First Pet Care & Health Tracking App
+<p>
+  <img src="./assets/pawprint-logo.png" alt="PawPrint Logo" width="180">
+</p>
+
+<h1>🐾 PawPrint</h1>
+
+<h3>Offline-First Pet Care & Health Tracking App</h3>
+
+<p>
+  <strong>Care for their health. Keep their memories. Stay connected — even offline.</strong>
+</p>
+
+<p>
+  <a href="#-features">✨ Features</a> •
+  <a href="#️-tech-stack">🛠️ Tech Stack</a> •
+  <a href="#️-architecture">🏗️ Architecture</a> •
+  <a href="#-application-workflow">🔄 Application Workflow</a> •
+  <a href="#-project-structure">📁 Project Structure</a>
+</p>
+
+</div>
+
+---
+
+# 🐾 About PawPrint
 
 PawPrint is a cross-platform mobile application designed to help pet owners manage their pets' health and care records in one place.
 
@@ -10,7 +34,11 @@ When the device reconnects to the internet, locally stored changes are automatic
 
 ---
 
-## ✨ Features
+# ✨ Features
+
+<table>
+<tr>
+<td width="50%">
 
 ### 🐶 Pet Profile Management
 
