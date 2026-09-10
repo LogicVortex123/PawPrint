@@ -1,7 +1,7 @@
 <div align="center">
 
 <p>
-  <img src="./assets/pawprint-logo.png" alt="PawPrint Logo" width="180">
+  <img src="./PawPrint%20logo.jpeg" alt="PawPrint Logo" width="180">
 </p>
 
 <h1>🐾 PawPrint</h1>
@@ -342,16 +342,28 @@ The goal is to make managing a pet's health information simple, reliable and acc
 
 # 🚀 Future Enhancements
 
-Potential future features include:
+PawPrint is designed to evolve beyond its core pet-care experience. Future enhancements may include:
 
-* 🚨 Emergency Mode
-* 👨‍👩‍👧 Family / Shared Pet Access
-* 📊 Advanced Health Trend Insights
-* 🌐 Multilingual Support
-* ♿ Improved Accessibility
-* 🌙 Dark Mode
-* 🧪 Expanded Automated Test Coverage
-* 📦 Automated Android/iOS build pipeline
+* 🚨 **Emergency Mode**  
+  Quick access to important pet information, emergency contacts, and essential medical details during urgent situations.
+
+* 👨‍👩‍👧 **Family / Shared Pet Access**  
+  Allow multiple family members or caretakers to securely access and manage the same pet's information.
+
+* 📊 **Advanced Health Trend Insights**  
+  Provide deeper insights from vaccination history, weight trends, and other recorded health data while keeping the system non-diagnostic.
+
+* 🌐 **Multilingual Support**  
+  Make PawPrint more accessible to pet owners by supporting multiple languages.
+
+* ♿ **Improved Accessibility**  
+  Enhance accessibility through better screen-reader support, scalable text, improved contrast, and accessible interaction patterns.
+
+* 🧪 **Expanded Automated Test Coverage**  
+  Increase unit, integration, and UI test coverage to improve application reliability as PawPrint grows.
+
+* 📦 **Automated Android / iOS Build Pipeline**  
+  Introduce CI/CD automation for testing and generating production-ready Android and iOS builds.
 
 Features such as a dedicated vet portal, teleconsultation and wearable integration are currently outside the MVP scope.
 
@@ -385,21 +397,6 @@ The mobile application is intended to support:
 Production builds will be generated using **EAS Build**.
 
 The backend can be deployed using **Render/Vercel**, with MongoDB used for cloud data storage.
-
----
-
-## 🐾 Project Status
-
-**Status:** 🚧 In Development
-
-**Track:** Application Development
-
-**Project:** PawPrint – Offline-First Pet Care & Health Tracking App
-
-**Team Members:**
-
-* Anushka Dudhe
-* Gati Kumawat
 
 ---
 
