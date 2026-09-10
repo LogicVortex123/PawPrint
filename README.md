@@ -1,20 +1,24 @@
 <div align="center">
 
-<img src="assets/pawprint-logo.png" alt="PawPrint Logo" width="180"/>
+<p>
+  <img src="./assets/pawprint-logo.png" alt="PawPrint Logo" width="180">
+</p>
 
-# 🐾 PawPrint
+<h1>🐾 PawPrint</h1>
 
-### Offline-First Pet Care & Health Tracking App
+<h3>Offline-First Pet Care & Health Tracking App</h3>
 
-**Care for their health. Keep their memories. Stay connected — even offline.**
+<p>
+  <strong>Care for their health. Keep their memories. Stay connected — even offline.</strong>
+</p>
 
-<br>
-
-[✨ Features](#-features) •
-[🛠️ Tech Stack](#️-tech-stack) •
-[🏗️ Architecture](#️-architecture) •
-[🔄 Application Workflow](#-application-workflow) •
-[📁 Project Structure](#-project-structure)
+<p>
+  <a href="#-features">✨ Features</a> •
+  <a href="#️-tech-stack">🛠️ Tech Stack</a> •
+  <a href="#️-architecture">🏗️ Architecture</a> •
+  <a href="#-application-workflow">🔄 Application Workflow</a> •
+  <a href="#-project-structure">📁 Project Structure</a>
+</p>
 
 </div>
 
@@ -26,15 +30,13 @@ PawPrint is a cross-platform mobile application designed to help pet owners mana
 
 The application allows users to create pet profiles, track vaccinations and weight, manage medical documents, book veterinary appointments, discover nearby clinics, and view their pet's complete health timeline.
 
-> **The core idea behind PawPrint is Offline-First.**
+The core idea behind PawPrint is **Offline-First**.
 
 Users can continue accessing and updating important pet information even without an internet connection. Changes are stored locally on the device and automatically synchronized with the cloud backend when connectivity is restored.
 
 ---
 
 # ✨ Features
-
-PawPrint brings everyday pet care into one connected experience.
 
 <table>
 <tr>
@@ -223,7 +225,6 @@ PawPrint follows an **offline-first architecture** where the local database acts
                                   │                   │                │
                                   ▼                   ▼                ▼
                              Image Picker       Notifications       Location
-                                  │
                                   │
                                   ▼
                          ┌─────────────────┐
