@@ -1,142 +1,76 @@
-<div align="center">
+# 🐾 PawPrint
 
-<p>
-  <img src="./assets/pawprint-logo.png" alt="PawPrint Logo" width="180">
-</p>
+### Offline-First Pet Care & Health Tracking App
 
-<h1>🐾 PawPrint</h1>
+PawPrint is a cross-platform mobile application designed to help pet owners manage their pets' health and care records in one place.
 
-<h3>Offline-First Pet Care & Health Tracking App</h3>
+The application allows users to manage **pet profiles, vaccination records, weight history, medical documents, and veterinary appointments**. Its key feature is an **offline-first architecture**, which allows users to access and update their pet's information even without an internet connection.
 
-<p>
-  <strong>Care for their health. Keep their memories. Stay connected — even offline.</strong>
-</p>
-
-<p>
-  <a href="#-features">✨ Features</a> •
-  <a href="#️-tech-stack">🛠️ Tech Stack</a> •
-  <a href="#️-architecture">🏗️ Architecture</a> •
-  <a href="#-application-workflow">🔄 Application Workflow</a> •
-  <a href="#-project-structure">📁 Project Structure</a>
-</p>
-
-</div>
+When the device reconnects to the internet, locally stored changes are automatically synchronized with the cloud backend.
 
 ---
 
-# 🐾 About PawPrint
+## ✨ Features
 
-PawPrint is a cross-platform mobile application designed to help pet owners manage their pets' health and care information in one place.
+### 🐶 Pet Profile Management
 
-The application allows users to create pet profiles, track vaccinations and weight, manage medical documents, book veterinary appointments, discover nearby clinics, and view their pet's complete health timeline.
-
-The core idea behind PawPrint is **Offline-First**.
-
-Users can continue accessing and updating important pet information even without an internet connection. Changes are stored locally on the device and automatically synchronized with the cloud backend when connectivity is restored.
-
----
-
-# ✨ Features
-
-<table>
-<tr>
-<td width="50%">
-
-### 🐶 Pet Management
-
-- Create and manage multiple pet profiles
-- Store pet name, species, breed, gender and date of birth
-- Add and update pet photos
-- Easily switch between multiple pets
-
-</td>
-
-<td width="50%">
+* Create and edit pet profiles
+* Add pet name, species, breed, gender, date of birth and photo
+* Support for multiple pets
+* Quickly switch between pets
 
 ### 💉 Vaccination Tracking
 
-- Add vaccination records
-- Store vaccination and next-due dates
-- Track completed, upcoming and overdue vaccinations
-- Receive vaccination reminders
+* Add vaccination records
+* Store vaccine name, administration date, next due date and veterinarian
+* Automatically identify:
 
-</td>
-</tr>
-
-<tr>
-<td width="50%">
+  * 🟢 Completed
+  * 🟡 Upcoming
+  * 🔴 Overdue
+* Schedule vaccination reminders
 
 ### ⚖️ Weight Tracking
 
-- Record pet weight over time
-- View weight history
-- Visualize weight trends
-- Get simple, non-diagnostic health insights
+* Record pet weight over time
+* View chronological weight history
+* Display weight trends using a line chart
+* Provide simple, non-diagnostic weight insights
 
-</td>
+### 🏥 Vet Appointments
 
-<td width="50%">
+* Book appointments for a specific pet
+* Select veterinary clinic, date and time
+* Add appointment reason and notes
+* Receive appointment reminders
 
-### 🏥 Veterinary Appointments
+### 📍 Nearby Clinic Discovery
 
-- Book veterinary appointments
-- Select pet, clinic, date and time
-- Add appointment reasons and notes
-- Receive appointment reminders
-
-</td>
-</tr>
-
-<tr>
-<td width="50%">
-
-### 📍 Nearby Veterinary Clinics
-
-- Find nearby veterinary clinics
-- Use device location to calculate distance
-- Sort clinics based on proximity
-- Provide a manual fallback when location permission is unavailable
-
-</td>
-
-<td width="50%">
+* Find nearby veterinary clinics using device location
+* Sort clinics based on distance
+* Provide a manual fallback when location access is unavailable
 
 ### 📄 Medical Document Vault
 
-- Store prescriptions and medical reports
-- Upload documents from camera or gallery
-- Categorize important medical documents
-- Access cached documents while offline
-- Retry failed uploads when the connection returns
+* Capture documents using camera or gallery
+* Categorize documents as:
 
-</td>
-</tr>
-
-<tr>
-<td width="50%">
+  * Prescription
+  * Medical Report
+  * Insurance
+  * Adoption
+* Cache documents for offline access
+* Automatically retry failed uploads when connectivity returns
 
 ### 🕐 Health Timeline
 
-View important health activities in one chronological timeline:
+View vaccinations, weight records, appointments and documents together in a chronological health timeline.
 
-- Vaccinations
-- Weight records
-- Vet appointments
-- Medical documents
+### 📶 Offline-First Support
 
-</td>
+PawPrint remains functional even without an internet connection.
 
-<td width="50%">
-
-### 📶 Offline-First
-
-PawPrint is designed to remain functional without an internet connection.
-
-Records are first saved locally and marked as pending synchronization. Once the device reconnects, the application automatically synchronizes the pending changes with the backend.
-
-</td>
-</tr>
-</table>
+All important records are first stored locally and marked as pending synchronization. Once the device is online again, the application automatically synchronizes the pending changes with the backend.
 
 ---
 
@@ -144,114 +78,305 @@ Records are first saved locally and marked as pending synchronization. Once the 
 
 ## 📱 Mobile Application
 
-| Technology | Purpose |
-|---|---|
-| **React Native** | Cross-platform mobile application |
-| **Expo** | Development framework and native device capabilities |
-| **TypeScript** | Type-safe application development |
-| **React Navigation** | Navigation between application screens |
-| **Zustand** | Global state management |
-
----
+| Technology           | Purpose                                             |
+| -------------------- | --------------------------------------------------- |
+| **React Native**     | Cross-platform mobile application                   |
+| **Expo**             | React Native development and native device features |
+| **TypeScript**       | Type-safe application development                   |
+| **React Navigation** | Screen navigation and routing                       |
+| **Zustand**          | Lightweight global state management                 |
 
 ## 💾 Local Storage
 
-| Technology | Purpose |
-|---|---|
-| **Expo SQLite** | Local offline database |
-| **AsyncStorage** | Lightweight local preferences and settings |
-
----
+| Technology       | Purpose                                                   |
+| ---------------- | --------------------------------------------------------- |
+| **Expo SQLite**  | Offline storage for pets, health records and appointments |
+| **AsyncStorage** | Small settings and preferences                            |
 
 ## ☁️ Backend
 
-| Technology | Purpose |
-|---|---|
-| **Node.js** | Backend runtime |
-| **Express.js** | REST API development |
-| **MongoDB** | Cloud database |
-| **Axios** | Client-server API communication |
+| Technology     | Purpose                                      |
+| -------------- | -------------------------------------------- |
+| **Node.js**    | Backend runtime                              |
+| **Express.js** | REST API development                         |
+| **MongoDB**    | Cloud database                               |
+| **Axios**      | Communication between mobile app and backend |
 
----
+## 🔐 Authentication & Security
 
-## 🔐 Security
+| Technology | Purpose                                   |
+| ---------- | ----------------------------------------- |
+| **JWT**    | User authentication and API authorization |
+| **bcrypt** | Secure password hashing                   |
 
-| Technology | Purpose |
-|---|---|
-| **JWT** | Authentication and API authorization |
-| **bcrypt** | Secure password hashing |
+## 📱 Native Features
 
----
-
-## 📱 Native Device Features
-
-| Technology | Purpose |
-|---|---|
-| **Expo Image Picker** | Pet photos and medical documents |
+| Expo Technology        | Purpose                               |
+| ---------------------- | ------------------------------------- |
+| **Expo Image Picker**  | Pet photos and medical documents      |
 | **Expo Notifications** | Vaccination and appointment reminders |
-| **Expo Location** | Nearby clinic discovery |
-
----
+| **Expo Location**      | Nearby veterinary clinic discovery    |
 
 ## 🧪 Testing & Deployment
 
-| Technology | Purpose |
-|---|---|
-| **Jest** | Automated testing |
-| **React Native Testing Library** | UI and component testing |
-| **EAS Build** | Android and iOS builds |
-| **Render / Vercel** | Backend deployment |
+| Technology                       | Purpose                           |
+| -------------------------------- | --------------------------------- |
+| **Jest**                         | Automated testing                 |
+| **React Native Testing Library** | Component and UI testing          |
+| **EAS Build**                    | Android and iOS production builds |
+| **Render / Vercel**              | Deployment                        |
 
 ---
 
-# 🏗️ Architecture
-
-PawPrint follows an **offline-first architecture** where the local database acts as the first point of persistence.
-
-### 🔄 PawPrint Data Flow
+# 🏗️ Application Architecture
 
 ```text
-                         ┌─────────────────────┐
-                         │      PawPrint       │
-                         │   React Native App  │
-                         └──────────┬──────────┘
+                    🐾 PawPrint
+                        │
+                        ▼
+              ┌────────────────────┐
+              │   React Native App │
+              │    Expo + TS       │
+              └─────────┬──────────┘
+                        │
+              ┌─────────┴──────────┐
+              │                    │
+              ▼                    ▼
+       ┌─────────────┐      ┌─────────────┐
+       │ Zustand     │      │ Expo SQLite │
+       │ State       │      │ Local Data  │
+       └─────────────┘      └──────┬──────┘
                                     │
-                   ┌────────────────┼────────────────┐
-                   │                │                │
-                   ▼                ▼                ▼
-              React UI          Zustand          Native APIs
-                                                      │
-                                  ┌───────────────────┼────────────────┐
-                                  │                   │                │
-                                  ▼                   ▼                ▼
-                             Image Picker       Notifications       Location
-                                  │
-                                  ▼
-                         ┌─────────────────┐
-                         │   Expo SQLite   │
-                         │  Local Storage  │
-                         └────────┬────────┘
-                                  │
-                           Pending Changes
-                                  │
-                                  ▼
-                          ┌───────────────┐
-                          │  Sync Engine  │
-                          └───────┬───────┘
-                                  │
-                        Internet Available
-                                  │
-                                  ▼
-                               Axios
-                                  │
-                                  ▼
-                         ┌─────────────────┐
-                         │ Node + Express  │
-                         │    REST API     │
-                         └────────┬────────┘
-                                  │
-                                  ▼
-                            ┌───────────┐
-                            │  MongoDB  │
-                            │   Cloud   │
-                            └───────────┘
+                              Offline Changes
+                                    │
+                                    ▼
+                              Sync Engine
+                                    │
+                             Internet Available
+                                    │
+                                    ▼
+                              Axios / REST API
+                                    │
+                                    ▼
+                         ┌────────────────────┐
+                         │ Node.js + Express  │
+                         │      Backend       │
+                         └─────────┬──────────┘
+                                   │
+                                   ▼
+                              ┌──────────┐
+                              │ MongoDB  │
+                              │  Cloud   │
+                              └──────────┘
+```
+
+---
+
+# 📶 Offline-First Workflow
+
+The core workflow of PawPrint is designed around offline usage.
+
+```text
+User creates/updates a record
+              │
+              ▼
+        Save to SQLite
+              │
+              ▼
+       Mark as Pending
+              │
+              ▼
+       UI updates instantly
+              │
+              ▼
+      Is internet available?
+          /           \
+        No             Yes
+        │               │
+        ▼               ▼
+ Pending Queue      Sync Engine
+                        │
+                        ▼
+                     Axios
+                        │
+                        ▼
+                  Express API
+                        │
+                        ▼
+                    MongoDB
+                        │
+                        ▼
+                  Sync Successful
+                        │
+                        ▼
+               Mark record Synced
+```
+
+This approach ensures that users can continue managing their pet's records even in areas with poor or no connectivity.
+
+---
+
+# 🔄 Main User Workflow
+
+```text
+App Launch
+    │
+    ▼
+Splash Screen
+    │
+    ▼
+Onboarding
+    │
+    ▼
+Login / Register
+    │
+    ▼
+Home Dashboard
+    │
+    ├── 🐶 Manage Pets
+    │
+    ├── 💉 Vaccinations
+    │
+    ├── ⚖️ Weight Tracking
+    │
+    ├── 🏥 Appointments
+    │
+    ├── 📄 Medical Documents
+    │
+    ├── 🕐 Health Timeline
+    │
+    └── 📍 Find Clinics
+```
+
+---
+
+# 🔐 Authentication Flow
+
+```text
+Register / Login
+       │
+       ▼
+Backend Validation
+       │
+       ▼
+bcrypt Password Verification
+       │
+       ▼
+JWT Generated
+       │
+       ▼
+JWT Stored on Device
+       │
+       ▼
+Authenticated API Requests
+```
+
+All synchronized user data is protected through authenticated API requests.
+
+---
+
+# 📱 Planned Screens
+
+* Splash Screen
+* Onboarding
+* Login
+* Registration
+* Home Dashboard
+* Pets
+* Pet Profile
+* Vaccination Records
+* Add Vaccination
+* Weight Tracker
+* Appointments
+* Book Appointment
+* Nearby Clinics
+* Medical Documents
+* Health Timeline
+* Profile / Settings
+
+---
+
+# 🎯 Project Goals
+
+PawPrint aims to provide:
+
+* **Offline-first reliability**
+* **Fast health record logging**
+* **Simple pet management**
+* **Secure cloud synchronization**
+* **Useful reminders**
+* **Easy access to important medical information**
+* **Support for multiple pets**
+
+The goal is to make managing a pet's health information simple, reliable and accessible — even without an internet connection.
+
+---
+
+# 🚀 Future Enhancements
+
+Potential future features include:
+
+* 🚨 Emergency Mode
+* 👨‍👩‍👧 Family / Shared Pet Access
+* 📊 Advanced Health Trend Insights
+* 🌐 Multilingual Support
+* ♿ Improved Accessibility
+* 🌙 Dark Mode
+* 🧪 Expanded Automated Test Coverage
+* 📦 Automated Android/iOS build pipeline
+
+Features such as a dedicated vet portal, teleconsultation and wearable integration are currently outside the MVP scope.
+
+---
+
+# 🧪 Testing
+
+The application will use:
+
+* **Jest** for automated tests
+* **React Native Testing Library** for UI/component testing
+
+Testing will focus on:
+
+* State management
+* Offline storage
+* Synchronization logic
+* Authentication
+* Core user flows
+* UI components
+
+---
+
+# 📦 Build & Deployment
+
+The mobile application is intended to support:
+
+* Android
+* iOS
+
+Production builds will be generated using **EAS Build**.
+
+The backend can be deployed using **Render/Vercel**, with MongoDB used for cloud data storage.
+
+---
+
+## 🐾 Project Status
+
+**Status:** 🚧 In Development
+
+**Track:** Application Development
+
+**Project:** PawPrint – Offline-First Pet Care & Health Tracking App
+
+**Team Members:**
+
+* Anushka Dudhe
+* Gati Kumawat
+
+---
+
+## 💙 Vision
+
+> **Care for your pets. Track their health. Stay prepared — even offline.**
+
+PawPrint brings your pet's essential health information together in one simple, reliable application.
