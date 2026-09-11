@@ -76,6 +76,7 @@ When the device reconnects to the internet, locally stored changes are automatic
 
 * Find nearby veterinary clinics using device location
 * Sort clinics based on distance
+* Save favorite clinics for faster booking next time
 * Provide a manual fallback when location access is unavailable
 
 ### 📄 Medical Document Vault
@@ -92,13 +93,42 @@ When the device reconnects to the internet, locally stored changes are automatic
 
 ### 🕐 Health Timeline
 
-View vaccinations, weight records, appointments and documents together in a chronological health timeline.
+* View vaccinations, weight records, appointments and documents together in a chronological health timeline
+* Filter timeline entries by event type
 
 ### 📶 Offline-First Support
 
 PawPrint remains functional even without an internet connection.
 
-All important records are first stored locally and marked as pending synchronization. Once the device is online again, the application automatically synchronizes the pending changes with the backend.
+* All important records are first stored locally and marked as pending synchronization
+* Once the device is online again, the application automatically synchronizes pending changes with the backend
+* Get notified when a sync completes or fails, so you're never left guessing
+
+### 🔐 Account & Security
+
+* Sign up and log in with email & password, or continue instantly with **Google Sign-In**
+* Secure sessions using JWT-based authentication
+* Passwords protected with bcrypt hashing
+* Optional biometric app lock (Face ID / Fingerprint)
+
+### 🌙 Personalization
+
+* Light and Dark theme, with automatic OS detection
+* Choose which reminders you want to receive (vaccination, appointment, sync)
+
+### 🚨 Emergency Mode
+
+* One-tap access to a pet's allergies, medications, vaccination summary and emergency contacts
+* Designed for fast, minimal-tap access during urgent situations
+
+### 🔍 Search & Export
+
+* Search and filter pets, vaccinations and appointments quickly
+* Export a pet's health summary as a shareable PDF for a new vet or boarding facility
+
+</td>
+</tr>
+</table>
 
 ---
 
@@ -106,13 +136,14 @@ All important records are first stored locally and marked as pending synchroniza
 
 ## 📱 Mobile Application
 
-| Technology           | Purpose                                             |
-| -------------------- | --------------------------------------------------- |
-| **React Native**     | Cross-platform mobile application                   |
-| **Expo**             | React Native development and native device features |
-| **TypeScript**       | Type-safe application development                   |
-| **React Navigation** | Screen navigation and routing                       |
-| **Zustand**          | Lightweight global state management                 |
+| Technology                     | Purpose                                              |
+| ------------------------------- | ----------------------------------------------------- |
+| **React Native**                | Cross-platform mobile application                     |
+| **Expo**                        | React Native development and native device features   |
+| **TypeScript**                  | Type-safe application development                     |
+| **React Navigation**            | Screen navigation and routing                          |
+| **Zustand**                     | Lightweight global state management                    |
+| **React Native Gifted Charts**  | Weight trend line chart                                |
 
 ## 💾 Local Storage
 
@@ -124,35 +155,37 @@ All important records are first stored locally and marked as pending synchroniza
 ## ☁️ Backend
 
 | Technology     | Purpose                                      |
-| -------------- | -------------------------------------------- |
-| **Node.js**    | Backend runtime                              |
-| **Express.js** | REST API development                         |
-| **MongoDB**    | Cloud database                               |
-| **Axios**      | Communication between mobile app and backend |
+| -------------- | --------------------------------------------- |
+| **Node.js**    | Backend runtime                               |
+| **Express.js** | REST API development                          |
+| **MongoDB**    | Cloud database                                |
+| **Axios**      | Communication between mobile app and backend  |
 
 ## 🔐 Authentication & Security
 
-| Technology | Purpose                                   |
-| ---------- | ----------------------------------------- |
-| **JWT**    | User authentication and API authorization |
-| **bcrypt** | Secure password hashing                   |
+| Technology                      | Purpose                                              |
+| -------------------------------- | ------------------------------------------------------ |
+| **JWT**                          | User authentication and API authorization             |
+| **bcrypt**                       | Secure password hashing                               |
+| **Google Sign-In (OAuth 2.0)**   | Sign in instantly with a Google account, no password  |
+| **Expo Local Authentication**    | Optional biometric (Face ID / Fingerprint) app lock   |
 
 ## 📱 Native Features
 
 | Expo Technology        | Purpose                               |
-| ---------------------- | ------------------------------------- |
-| **Expo Image Picker**  | Pet photos and medical documents      |
-| **Expo Notifications** | Vaccination and appointment reminders |
-| **Expo Location**      | Nearby veterinary clinic discovery    |
+| ----------------------- | -------------------------------------- |
+| **Expo Image Picker**   | Pet photos and medical documents       |
+| **Expo Notifications**  | Vaccination and appointment reminders  |
+| **Expo Location**       | Nearby veterinary clinic discovery     |
 
 ## 🧪 Testing & Deployment
 
 | Technology                       | Purpose                           |
-| -------------------------------- | --------------------------------- |
-| **Jest**                         | Automated testing                 |
-| **React Native Testing Library** | Component and UI testing          |
-| **EAS Build**                    | Android and iOS production builds |
-| **Render / Vercel**              | Deployment                        |
+| --------------------------------- | ----------------------------------- |
+| **Jest**                          | Automated testing                  |
+| **React Native Testing Library**  | Component and UI testing           |
+| **EAS Build**                     | Android and iOS production builds  |
+| **Render / Vercel**               | Deployment                         |
 
 ---
 
@@ -238,6 +271,9 @@ User creates/updates a record
                         │
                         ▼
                Mark record Synced
+                        │
+                        ▼
+          Notify user (sync complete)
 ```
 
 This approach ensures that users can continue managing their pet's records even in areas with poor or no connectivity.
@@ -256,7 +292,7 @@ Splash Screen
 Onboarding
     │
     ▼
-Login / Register
+Login / Register (Email or Google)
     │
     ▼
 Home Dashboard
@@ -273,6 +309,8 @@ Home Dashboard
     │
     ├── 🕐 Health Timeline
     │
+    ├── 🚨 Emergency Mode
+    │
     └── 📍 Find Clinics
 ```
 
@@ -281,25 +319,32 @@ Home Dashboard
 # 🔐 Authentication Flow
 
 ```text
-Register / Login
-       │
-       ▼
-Backend Validation
-       │
-       ▼
-bcrypt Password Verification
-       │
-       ▼
-JWT Generated
-       │
-       ▼
-JWT Stored on Device
-       │
-       ▼
-Authenticated API Requests
+                Register / Login
+                       │
+        ┌──────────────┴──────────────┐
+        │                             │
+        ▼                             ▼
+ Email & Password               Google Sign-In
+        │                             │
+        ▼                             ▼
+Backend Validation            Google ID Token
+        │                     Verified Server-Side
+        ▼                     (google-auth-library)
+bcrypt Password                      │
+   Verification                      │
+        │                            │
+        └──────────────┬─────────────┘
+                        ▼
+                 JWT Generated
+                        │
+                        ▼
+               JWT Stored on Device
+                        │
+                        ▼
+           Authenticated API Requests
 ```
 
-All synchronized user data is protected through authenticated API requests.
+All synchronized user data is protected through authenticated API requests, regardless of which sign-in method was used.
 
 ---
 
@@ -320,7 +365,9 @@ All synchronized user data is protected through authenticated API requests.
 * Nearby Clinics
 * Medical Documents
 * Health Timeline
+* Emergency Mode
 * Profile / Settings
+* Notification Settings
 
 ---
 
@@ -343,9 +390,6 @@ The goal is to make managing a pet's health information simple, reliable and acc
 # 🚀 Future Enhancements
 
 PawPrint is designed to evolve beyond its core pet-care experience. Future enhancements may include:
-
-* 🚨 **Emergency Mode**  
-  Quick access to important pet information, emergency contacts, and essential medical details during urgent situations.
 
 * 👨‍👩‍👧 **Family / Shared Pet Access**  
   Allow multiple family members or caretakers to securely access and manage the same pet's information.
@@ -381,7 +425,7 @@ Testing will focus on:
 * State management
 * Offline storage
 * Synchronization logic
-* Authentication
+* Authentication (email/password and Google Sign-In)
 * Core user flows
 * UI components
 
