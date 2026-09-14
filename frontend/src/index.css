@@ -1,0 +1,117 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --color-bg: #F8F8F2;
+    --color-card: #FFFFFF;
+    --color-text-main: #243638;
+    --color-text-muted: #526461;
+    --color-forest: #245C4A;
+    --color-sage: #6F9F89;
+    --color-soft-sage: #DCEBE2;
+  }
+
+  .dark {
+    --color-bg: #0F241E;
+    --color-card: #17362D;
+    --color-text-main: #F8F8F2;
+    --color-text-muted: #A8C5B3;
+    --color-forest: #6F9F89;
+    --color-sage: #A8C5B3;
+    --color-soft-sage: #1C4237;
+  }
+
+  body {
+    background-color: var(--color-bg);
+    color: var(--color-text-main);
+    font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+    overflow-x: hidden;
+  }
+}
+
+/* Custom script accent style */
+.font-script {
+  font-family: 'Caveat', cursive;
+}
+
+/* Organic curved divider */
+.organic-wave-divider {
+  position: relative;
+  width: 100%;
+  overflow: hidden;
+  line-height: 0;
+}
+
+/* Subtle background paw watermark pattern */
+.bg-paw-pattern {
+  background-image: radial-gradient(#6F9F89 0.75px, transparent 0.75px);
+  background-size: 24px 24px;
+}
+
+/* Custom organic blobs & shapes */
+.organic-blob-1 {
+  border-radius: 60% 40% 30% 70% / 60% 30% 70% 40%;
+}
+
+.organic-blob-2 {
+  border-radius: 40% 60% 70% 30% / 40% 40% 60% 55%;
+}
+
+.organic-blob-3 {
+  border-radius: 50% 50% 33% 67% / 55% 27% 73% 45%;
+}
+
+/* Glassmorphism accent for floating cards */
+.glass-card {
+  background: rgba(255, 255, 255, 0.85);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+}
+
+.dark .glass-card {
+  background: rgba(23, 54, 45, 0.85);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: #EEF6F0;
+}
+
+.dark ::-webkit-scrollbar-track {
+  background: #0F241E;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #A8C5B3;
+  border-radius: 4px;
+}
+
+.dark ::-webkit-scrollbar-thumb {
+  background: #2A5548;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #6F9F89;
+}
+
+/* Animation accessibility */
+@media (prefers-reduced-motion: reduce) {
+  *, ::before, ::after {
+    animation-delay: -1ms !important;
+    animation-duration: 1ms !important;
+    animation-iteration-count: 1 !important;
+    background-attachment: initial !important;
+    scroll-behavior: auto !important;
+    transition-duration: 0s !important;
+    transition-delay: 0s !important;
+  }
+}
