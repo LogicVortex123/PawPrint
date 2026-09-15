@@ -4,10 +4,12 @@ const { port } = require('./config/env');
 
 async function start() {
   await connectDB();
-  app.listen(port, () => console.log(`PawPrint backend listening on port ${port}`));
+  app.listen(port, () => {
+    console.log(`PawPrint backend running on port ${port}`);
+  });
 }
 
 start().catch((err) => {
-  console.error('Failed to start server:', err);
+  console.error('Server failed to start:', err);
   process.exit(1);
 });

@@ -1,9 +1,13 @@
 const router = require('express').Router();
-const { register, login, google } = require('../controllers/auth.controller');
+const requireAuth = require('../middleware/auth.middleware');
+const { register, login, me, google } = require('../controllers/auth.controller');
 
-// TRD Section 7: the only endpoints that do NOT require a JWT.
+// Public routes — no token needed
 router.post('/register', register);
 router.post('/login', login);
 router.post('/google', google);
+
+// Protected — requires a valid JWT
+router.get('/me', requireAuth, me);
 
 module.exports = router;

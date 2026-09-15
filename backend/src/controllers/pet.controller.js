@@ -2,21 +2,20 @@ const Pet = require('../models/Pet.model');
 const asyncHandler = require('../utils/asyncHandler');
 const { findOwnedPetOrFail } = require('../services/petAccess.service');
 
-// GET /pets — TRD Section 7
+// GET /pets
 const listPets = asyncHandler(async (req, res) => {
   const pets = await Pet.find({ owner: req.userId }).sort({ createdAt: -1 });
   res.json(pets);
 });
 
-// GET /pets/:id — needed by the Pet Profile screen; not itemized in TRD
-// Section 7's endpoint table but implied by "Pet Profile CRUD" (TR-005).
+// GET /pets/:id
 const getPet = asyncHandler(async (req, res) => {
   const pet = await findOwnedPetOrFail(req.params.id, req.userId);
   res.json(pet);
 });
 
-// POST /pets — TR-005. clientLocalId lets a retried sync push be a no-op
-// instead of creating a duplicate (Sync Accuracy NFR: 0% duplicates).
+// POST /pets
+// clientLocalId lets the mobile sync queue retry a push safely without creating duplicates
 const createPet = asyncHandler(async (req, res) => {
   const { clientLocalId } = req.body;
 
@@ -29,14 +28,14 @@ const createPet = asyncHandler(async (req, res) => {
   res.status(201).json(pet);
 });
 
-// PUT /pets/:id — TR-005
+// PUT /pets/:id
 const updatePet = asyncHandler(async (req, res) => {
   await findOwnedPetOrFail(req.params.id, req.userId);
   const pet = await Pet.findByIdAndUpdate(req.params.id, req.body, { new: true });
   res.json(pet);
 });
 
-// DELETE /pets/:id — TRD Section 7
+// DELETE /pets/:id
 const deletePet = asyncHandler(async (req, res) => {
   await findOwnedPetOrFail(req.params.id, req.userId);
   await Pet.findByIdAndDelete(req.params.id);

@@ -3,16 +3,19 @@ const asyncHandler = require('../utils/asyncHandler');
 const ApiError = require('../utils/ApiError');
 const { findOwnedPetOrFail } = require('../services/petAccess.service');
 
-// GET /appointments — TR-008 (across all of the user's pets)
+// GET /appointments — all appointments across all of the user's pets
 const list = asyncHandler(async (req, res) => {
   const appointments = await Appointment.find({ owner: req.userId }).sort({ date: 1 });
   res.json(appointments);
 });
 
-// POST /appointments — TR-008, TR-009 dedupe via clientLocalId
+// POST /appointments
 const create = asyncHandler(async (req, res) => {
   const { pet, clientLocalId } = req.body;
+
   if (!pet) throw new ApiError(400, 'pet is required');
+
+  // Make sure this pet actually belongs to the logged-in user
   await findOwnedPetOrFail(pet, req.userId);
 
   if (clientLocalId) {
@@ -24,7 +27,7 @@ const create = asyncHandler(async (req, res) => {
   res.status(201).json(appointment);
 });
 
-// PUT /appointments/:id — TRD Section 7
+// PUT /appointments/:id
 const update = asyncHandler(async (req, res) => {
   const appointment = await Appointment.findOne({ _id: req.params.id, owner: req.userId });
   if (!appointment) throw new ApiError(404, 'Appointment not found');

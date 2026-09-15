@@ -4,14 +4,14 @@ const ApiError = require('../utils/ApiError');
 const { findOwnedPetOrFail } = require('../services/petAccess.service');
 const { withStatus } = require('../services/vaccinationStatus.service');
 
-// GET /pets/:id/vaccinations — TRD Section 7
+// GET /pets/:id/vaccinations
 const listForPet = asyncHandler(async (req, res) => {
   await findOwnedPetOrFail(req.params.id, req.userId);
   const vaccinations = await Vaccination.find({ pet: req.params.id }).sort({ nextDueDate: 1 });
   res.json(vaccinations.map(withStatus));
 });
 
-// POST /pets/:id/vaccinations — TR-005-adjacent CRUD, TR-009 dedupe via clientLocalId
+// POST /pets/:id/vaccinations
 const createForPet = asyncHandler(async (req, res) => {
   await findOwnedPetOrFail(req.params.id, req.userId);
   const { clientLocalId } = req.body;
@@ -25,10 +25,12 @@ const createForPet = asyncHandler(async (req, res) => {
   res.status(201).json(withStatus(vaccination));
 });
 
-// PUT /vaccinations/:id — TRD Section 7 (top-level, not nested under /pets)
+// PUT /vaccinations/:id — top-level route, not nested under /pets
 const update = asyncHandler(async (req, res) => {
   const vaccination = await Vaccination.findById(req.params.id);
   if (!vaccination) throw new ApiError(404, 'Vaccination not found');
+
+  // Double-check the pet belongs to the current user before allowing edits
   await findOwnedPetOrFail(vaccination.pet, req.userId);
 
   Object.assign(vaccination, req.body);

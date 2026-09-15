@@ -1,5 +1,5 @@
-// TR-006: Derive Upcoming/Overdue/Completed by comparing nextDueDate to now.
-// Kept out of controllers so the same rule applies to every response shape.
+// Vaccination status is derived on every read by comparing nextDueDate to today.
+// We never store it in the DB because it would go stale without an active background job.
 function deriveVaccinationStatus(nextDueDate, now = new Date()) {
   const due = new Date(nextDueDate);
   const daysUntilDue = Math.ceil((due - now) / (1000 * 60 * 60 * 24));

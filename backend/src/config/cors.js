@@ -1,13 +1,14 @@
 const { webOrigins, nodeEnv } = require('./env');
 
-// TR-016: only the approved web app origin(s) may call the API from a browser.
-// Native mobile requests carry no Origin header and are unaffected by CORS.
+// In production, only requests coming from the listed WEB_ORIGIN(s) are allowed.
+// In dev, if WEB_ORIGIN isn't set at all, every origin passes through so you don't
+// have to fiddle with env vars just to hit the API from localhost.
 const corsOptions = {
   origin(origin, callback) {
     if (!origin) return callback(null, true);
     if (webOrigins.includes(origin)) return callback(null, true);
     if (nodeEnv !== 'production' && !webOrigins.length) return callback(null, true);
-    return callback(new Error(`Origin ${origin} not allowed by CORS`));
+    return callback(new Error(`Origin ${origin} not allowed`));
   },
   credentials: true,
 };

@@ -3,9 +3,9 @@ const asyncHandler = require('../utils/asyncHandler');
 const ApiError = require('../utils/ApiError');
 const { rankByDistance } = require('../services/clinicDistance.service');
 
-// GET /clinics/nearby?lat=..&lng=.. — TR-008 / TR-011
-// TR-011: if the client couldn't get a location (permission denied), it omits
-// lat/lng and falls back to a manual search — we just return the unranked list.
+// GET /clinics/nearby?lat=..&lng=..
+// If the client couldn't get location (permission denied), it omits lat/lng and
+// we just return the unranked full list as a fallback for manual browsing.
 const nearby = asyncHandler(async (req, res) => {
   const { lat, lng } = req.query;
   const clinics = await Clinic.find();
@@ -16,8 +16,9 @@ const nearby = asyncHandler(async (req, res) => {
 
   const latitude = Number(lat);
   const longitude = Number(lng);
+
   if (Number.isNaN(latitude) || Number.isNaN(longitude)) {
-    throw new ApiError(400, 'lat and lng must be numbers');
+    throw new ApiError(400, 'lat and lng must be valid numbers');
   }
 
   res.json(rankByDistance(clinics, latitude, longitude));

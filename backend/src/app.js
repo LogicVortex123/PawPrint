@@ -14,13 +14,11 @@ app.use(morgan('dev'));
 app.use(cors(corsOptions));
 app.use(express.json());
 
-// Serves uploaded pet photos and documents (TR-010).
+// Serve uploaded pet photos and documents from disk
 app.use('/uploads', express.static(path.join(__dirname, '..', 'uploads')));
 
 app.get('/health', (req, res) => res.json({ status: 'ok' }));
 
-// Mounted at root, not /api, to match TRD Section 7's paths exactly
-// (e.g. POST /auth/register, GET /clinics/nearby).
 app.use('/', routes);
 
 app.use(notFound);
