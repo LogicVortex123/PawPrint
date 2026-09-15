@@ -1,5 +1,5 @@
 import React, { useEffect } from 'react';
-import { Routes, Route, useLocation } from 'react-router-dom';
+import { Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { Navbar } from './components/common/Navbar';
 import { Footer } from './components/common/Footer';
 import { Toast } from './components/common/Toast';
@@ -20,16 +20,25 @@ function ScrollToTop() {
   return null;
 }
 
+// Wraps any route that requires the user to be logged in.
+// If they're not authenticated, they get sent to /login with a
+// redirect param so we can bounce them back after they sign in.
+function ProtectedRoute({ children }: { children: React.ReactNode }) {
+  const { isAuthenticated } = useAppStore();
+  const { pathname } = useLocation();
+
+  if (!isAuthenticated) {
+    return <Navigate to={`/login?redirect=${encodeURIComponent(pathname)}`} replace />;
+  }
+
+  return <>{children}</>;
+}
+
 export const App: React.FC = () => {
   const { theme } = useAppStore();
 
-  // Apply dark mode class to html element
   useEffect(() => {
-    if (theme === 'dark') {
-      document.documentElement.classList.add('dark');
-    } else {
-      document.documentElement.classList.remove('dark');
-    }
+    document.documentElement.classList.toggle('dark', theme === 'dark');
   }, [theme]);
 
   return (
@@ -42,7 +51,14 @@ export const App: React.FC = () => {
           <Route path="/features" element={<Features />} />
           <Route path="/about" element={<About />} />
           <Route path="/roadmap" element={<Roadmap />} />
-          <Route path="/analytics" element={<Analytics />} />
+          <Route
+            path="/analytics"
+            element={
+              <ProtectedRoute>
+                <Analytics />
+              </ProtectedRoute>
+            }
+          />
           <Route path="/login" element={<Login />} />
           <Route path="/signup" element={<Signup />} />
           <Route path="*" element={<Home />} />
