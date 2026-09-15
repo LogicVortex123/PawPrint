@@ -1,7 +1,7 @@
 <div align="center">
 
 <p>
-  <img src="./PawPrint%20logo.jpeg" alt="PawPrint Logo" width="180">
+  <img src="https://github.com/LogicVortex123/PawPrint/blob/main/backend/PawPrint%20logo.png?raw=true" alt="PawPrint Logo" width="180">
 </p>
 
 <h1>🐾 PawPrint</h1>
