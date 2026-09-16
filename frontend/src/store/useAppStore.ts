@@ -19,6 +19,7 @@ interface AppState {
   authError: string | null;
   login: (email: string, password: string) => Promise<void>;
   signup: (name: string, email: string, password: string) => Promise<void>;
+  googleLogin: (idToken: string) => Promise<void>;
   logout: () => void;
   clearAuthError: () => void;
 
@@ -124,6 +125,23 @@ export const useAppStore = create<AppState>((set, get) => ({
       set({ user: data.user, token: data.token, isAuthenticated: true, authLoading: false });
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : 'Sign up failed';
+      set({ authError: msg, authLoading: false });
+      throw err;
+    }
+  },
+
+  googleLogin: async (idToken) => {
+    set({ authLoading: true, authError: null });
+    try {
+      const data = await apiRequest<{ token: string; user: AuthUser }>('/auth/google', {
+        method: 'POST',
+        body: { idToken },
+      });
+      localStorage.setItem('pawprint-token', data.token);
+      localStorage.setItem('pawprint-user', JSON.stringify(data.user));
+      set({ user: data.user, token: data.token, isAuthenticated: true, authLoading: false });
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Google sign-in failed';
       set({ authError: msg, authLoading: false });
       throw err;
     }
