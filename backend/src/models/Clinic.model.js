@@ -10,6 +10,10 @@ const clinicSchema = new mongoose.Schema(
     phone: { type: String, trim: true },
     latitude: { type: Number, required: true },
     longitude: { type: Number, required: true },
+    rating: { type: Number, min: 0, max: 5 },
+    reviewsCount: { type: Number, default: 0 },
+    hours: { type: String, trim: true },
+    emergency24_7: { type: Boolean, default: false },
   },
   { timestamps: true }
 );

@@ -25,7 +25,7 @@ export const Navbar: React.FC = () => {
 
   const handleLogout = () => {
     logout();
-    showToast("You've been logged out. See you next time! 🐾");
+    showToast('You\'ve been signed out. See you soon! 👋');
     setMobileMenuOpen(false);
     navigate('/');
   };

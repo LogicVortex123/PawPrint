@@ -8,6 +8,7 @@
     "start": "node src/server.js",
     "dev": "nodemon src/server.js",
     "db:check": "node src/scripts/dbCheck.js",
+    "seed:clinics": "node src/scripts/seedClinics.js",
     "test": "jest --runInBand"
   },
   "dependencies": {

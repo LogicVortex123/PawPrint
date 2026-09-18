@@ -35,11 +35,21 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
 }
 
 export const App: React.FC = () => {
-  const { theme } = useAppStore();
+  const { theme, isAuthenticated, fetchPets } = useAppStore();
 
   useEffect(() => {
     document.documentElement.classList.toggle('dark', theme === 'dark');
   }, [theme]);
+
+  // Covers a page refresh: the login/signup/googleLogin actions already fetch
+  // pets at the moment of logging in, but a session restored from a stored
+  // token on reload never runs those, so it needs its own fetch here.
+  useEffect(() => {
+    if (isAuthenticated) {
+      fetchPets();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isAuthenticated]);
 
   return (
     <div className="min-h-screen flex flex-col bg-paw-cream dark:bg-paw-darkbg text-paw-dark dark:text-white transition-colors duration-200">
@@ -48,7 +58,14 @@ export const App: React.FC = () => {
       <main className="flex-grow">
         <Routes>
           <Route path="/" element={<Home />} />
-          <Route path="/features" element={<Features />} />
+          <Route
+            path="/features"
+            element={
+              <ProtectedRoute>
+                <Features />
+              </ProtectedRoute>
+            }
+          />
           <Route path="/about" element={<About />} />
           <Route path="/roadmap" element={<Roadmap />} />
           <Route

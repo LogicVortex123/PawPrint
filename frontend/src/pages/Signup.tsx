@@ -30,7 +30,9 @@ export const Signup: React.FC = () => {
 
     try {
       await signup(name, email, password);
-      showToast(`Welcome to PawPrint, ${name}! 🐾`);
+      const firstName = name.split(' ')[0];
+      const petPart = petName ? ` Get ${petName}'s first profile set up right away!` : '';
+      showToast(`Welcome to PawPrint, ${firstName}! 🐾${petPart}`);
       navigate('/analytics');
     } catch {
       // error already in store
@@ -47,13 +49,13 @@ export const Signup: React.FC = () => {
     try {
       const idToken = await requestGoogleIdToken();
       await googleLogin(idToken);
-      showToast('Welcome to PawPrint! 🐾');
+      const firstName = useAppStore.getState().user?.name?.split(' ')[0] || 'there';
+      showToast(`Account created! Welcome, ${firstName}! 🐾`);
       navigate('/analytics');
     } catch (err) {
-      // googleLogin failures land in authError (banner shows it); token-request
-      // failures (cancelled prompt, missing config) don't touch the store
       if (!useAppStore.getState().authError) {
-        showToast(err instanceof Error ? err.message : 'Google Sign-In failed');
+        const msg = err instanceof Error ? err.message : 'Google Sign-In failed';
+        showToast(`❌ ${msg}`);
       }
     } finally {
       setGoogleLoading(false);
@@ -79,10 +81,10 @@ export const Signup: React.FC = () => {
             </span>
           </Link>
           <h1 className="text-3xl font-extrabold text-paw-dark dark:text-white tracking-tight">
-            Create your PawPrint account
+            Create your free account
           </h1>
           <p className="text-sm text-paw-secondary dark:text-paw-warm-sage/80">
-            Care for their health. Keep their memories. Free for life.
+            Join thousands of pet parents tracking their pets' health — it's free, always.
           </p>
         </div>
 

@@ -1,11 +1,14 @@
 import React, { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { Lock, Mail, Eye, EyeOff, ArrowRight, AlertCircle, Loader2 } from 'lucide-react';
 import { useAppStore } from '../store/useAppStore';
 import { requestGoogleIdToken } from '../lib/googleIdentity';
 
 export const Login: React.FC = () => {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const redirect = searchParams.get('redirect') || '/analytics';
+
   const { login, googleLogin, authLoading, authError, clearAuthError, showToast } = useAppStore();
 
   const [email, setEmail] = useState('');
@@ -17,10 +20,11 @@ export const Login: React.FC = () => {
     e.preventDefault();
     try {
       await login(email, password);
-      showToast('Welcome back to PawPrint! 🐾');
-      navigate('/analytics');
+      const firstName = useAppStore.getState().user?.name?.split(' ')[0] || 'back';
+      showToast(`Welcome back, ${firstName}! 🐾`);
+      navigate(redirect, { replace: true });
     } catch {
-      // error is already set in the store, nothing extra needed here
+      // authError already set in store with a friendly message
     }
   };
 
@@ -29,13 +33,13 @@ export const Login: React.FC = () => {
     try {
       const idToken = await requestGoogleIdToken();
       await googleLogin(idToken);
-      showToast('Welcome back to PawPrint! 🐾');
-      navigate('/analytics');
+      const firstName = useAppStore.getState().user?.name?.split(' ')[0] || 'there';
+      showToast(`Welcome back, ${firstName}! 🐾`);
+      navigate(redirect, { replace: true });
     } catch (err) {
-      // googleLogin failures land in authError (banner shows it); token-request
-      // failures (cancelled prompt, missing config) don't touch the store
       if (!useAppStore.getState().authError) {
-        showToast(err instanceof Error ? err.message : 'Google Sign-In failed');
+        const msg = err instanceof Error ? err.message : 'Google Sign-In failed';
+        showToast(`❌ ${msg}`);
       }
     } finally {
       setGoogleLoading(false);
@@ -65,10 +69,10 @@ export const Login: React.FC = () => {
             </span>
           </Link>
           <h1 className="text-3xl font-extrabold text-paw-dark dark:text-white tracking-tight">
-            Welcome Back
+            Welcome back
           </h1>
           <p className="text-sm text-paw-secondary dark:text-paw-warm-sage/80">
-            Log in to manage your pets' health records and reminders.
+            Sign in to view your pets' health records, upcoming appointments, and more.
           </p>
         </div>
 
@@ -108,7 +112,7 @@ export const Login: React.FC = () => {
               <div className="w-full border-t border-paw-soft-sage/50 dark:border-paw-darkborder" />
             </div>
             <span className="relative px-4 bg-[#FAFAF6] dark:bg-paw-darksurface text-xs text-paw-secondary dark:text-paw-warm-sage font-semibold uppercase tracking-wider">
-              Or with email
+              Or sign in with email
             </span>
           </div>
 
@@ -124,9 +128,10 @@ export const Login: React.FC = () => {
                 <input
                   type="email"
                   required
+                  autoComplete="email"
                   value={email}
                   onChange={(e) => { setEmail(e.target.value); handleFieldChange(); }}
-                  placeholder="name@example.com"
+                  placeholder="you@example.com"
                   className="w-full pl-10 pr-4 py-3 rounded-2xl border border-paw-soft-sage dark:border-paw-darkborder bg-paw-cream dark:bg-paw-darkcard text-paw-dark dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-paw-forest transition-colors"
                 />
               </div>
@@ -139,7 +144,7 @@ export const Login: React.FC = () => {
                 </label>
                 <button
                   type="button"
-                  onClick={() => showToast('Password reset is not yet available — contact support')}
+                  onClick={() => showToast('ℹ️ Password reset isn\'t available yet — please contact support.')}
                   className="text-xs font-semibold text-paw-forest dark:text-paw-warm-sage hover:underline"
                 >
                   Forgot password?
@@ -152,15 +157,17 @@ export const Login: React.FC = () => {
                 <input
                   type={showPassword ? 'text' : 'password'}
                   required
+                  autoComplete="current-password"
                   value={password}
                   onChange={(e) => { setPassword(e.target.value); handleFieldChange(); }}
-                  placeholder="Your secure password"
+                  placeholder="Your password"
                   className="w-full pl-10 pr-10 py-3 rounded-2xl border border-paw-soft-sage dark:border-paw-darkborder bg-paw-cream dark:bg-paw-darkcard text-paw-dark dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-paw-forest transition-colors"
                 />
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
                   className="absolute inset-y-0 right-0 pr-3.5 flex items-center text-paw-secondary hover:text-paw-dark"
+                  aria-label={showPassword ? 'Hide password' : 'Show password'}
                 >
                   {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                 </button>
@@ -180,7 +187,7 @@ export const Login: React.FC = () => {
                   </>
                 ) : (
                   <>
-                    <span>Login to PawPrint</span>
+                    <span>Sign In to PawPrint</span>
                     <ArrowRight className="w-4 h-4" />
                   </>
                 )}
@@ -189,9 +196,9 @@ export const Login: React.FC = () => {
           </form>
 
           <div className="mt-6 text-center text-xs text-paw-secondary dark:text-paw-warm-sage">
-            Don't have an account yet?{' '}
+            New to PawPrint?{' '}
             <Link to="/signup" className="font-bold text-paw-forest dark:text-paw-warm-sage hover:underline">
-              Create one here →
+              Create a free account →
             </Link>
           </div>
 

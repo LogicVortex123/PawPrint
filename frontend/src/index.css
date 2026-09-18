@@ -115,3 +115,57 @@
     transition-delay: 0s !important;
   }
 }
+
+/* ── Animations ────────────────────────────────────────── */
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes slideUp {
+  from { opacity: 0; transform: translateY(20px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes bounceShort {
+  0%, 100% { transform: translateY(0); }
+  30%       { transform: translateY(-6px); }
+  60%       { transform: translateY(-2px); }
+}
+
+@keyframes pulseRing {
+  0%   { box-shadow: 0 0 0 0 rgba(36, 92, 74, 0.4); }
+  70%  { box-shadow: 0 0 0 10px rgba(36, 92, 74, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(36, 92, 74, 0); }
+}
+
+@keyframes shimmer {
+  from { background-position: -200% center; }
+  to   { background-position: 200% center; }
+}
+
+.animate-fadeIn      { animation: fadeIn 0.25s ease-out both; }
+.animate-slideUp     { animation: slideUp 0.3s ease-out both; }
+.animate-bounce-short{ animation: bounceShort 0.5s ease-out; }
+.animate-pulse-ring  { animation: pulseRing 1.5s ease-out infinite; }
+
+/* Skeleton loading shimmer */
+.animate-shimmer {
+  background: linear-gradient(90deg, #e0ede6 25%, #f0f7f3 50%, #e0ede6 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+}
+.dark .animate-shimmer {
+  background: linear-gradient(90deg, #1a3a30 25%, #213f35 50%, #1a3a30 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+}
+
+/* Hide scrollbar visually but keep scroll behaviour */
+.scrollbar-none {
+  scrollbar-width: none;
+}
+.scrollbar-none::-webkit-scrollbar {
+  display: none;
+}

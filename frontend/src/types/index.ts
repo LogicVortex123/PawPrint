@@ -78,6 +78,7 @@ export interface MedicalDocument {
   date: string;
   fileSize: string;
   syncedOffline: boolean;
+  fileUrl?: string;
 }
 
 export interface HealthTimelineEntry {

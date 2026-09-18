@@ -9,6 +9,8 @@ const vaccinationSchema = new mongoose.Schema(
     administrationDate: { type: Date, required: true },
     nextDueDate: { type: Date, required: true },
     veterinarian: { type: String, trim: true },
+    clinic: { type: String, trim: true },
+    batchNumber: { type: String, trim: true },
     notes: { type: String, trim: true },
     clientLocalId: { type: String, index: true, sparse: true },
   },

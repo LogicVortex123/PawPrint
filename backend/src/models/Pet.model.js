@@ -11,6 +11,7 @@ const petSchema = new mongoose.Schema(
     gender: { type: String, enum: ['male', 'female', 'unknown'], default: 'unknown' },
     dateOfBirth: { type: Date },
     photoUrl: { type: String },
+    microchipId: { type: String, trim: true },
     allergies: [{ type: String, trim: true }],
     medications: [{ type: String, trim: true }],
     emergencyContacts: [
