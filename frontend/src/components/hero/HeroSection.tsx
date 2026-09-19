@@ -1,7 +1,7 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { PhoneMockup } from './PhoneMockup';
-import { ArrowRight, Wifi } from 'lucide-react';
+import { ArrowRight, Wifi, WifiOff, Lock, RefreshCw } from 'lucide-react';
 
 export const HeroSection: React.FC = () => {
   return (
@@ -114,35 +114,19 @@ export const HeroSection: React.FC = () => {
               </Link>
             </div>
 
-            {/* Social Proof with 4 Pet Avatars */}
-            <div className="pt-3 flex items-center gap-3.5">
-              <div className="flex -space-x-2.5">
-                <img
-                  src="/dog.jpg"
-                  alt="Dog 1"
-                  className="w-10 h-10 rounded-full object-cover border-2 border-white dark:border-paw-darkbg shadow-xs"
-                />
-                <img
-                  src="/cat.jpg"
-                  alt="Cat 1"
-                  className="w-10 h-10 rounded-full object-cover border-2 border-white dark:border-paw-darkbg shadow-xs"
-                />
-                <img
-                  src="/dog.jpg"
-                  alt="Dog 2"
-                  className="w-10 h-10 rounded-full object-cover border-2 border-white dark:border-paw-darkbg shadow-xs"
-                />
-                <img
-                  src="/cat_sitting_clean.png"
-                  alt="Cat 2"
-                  className="w-10 h-10 rounded-full object-cover border-2 border-white dark:border-paw-darkbg shadow-xs bg-[#E0EDE4]"
-                />
+            {/* Trust indicators — what the product actually does, not a made-up stat */}
+            <div className="pt-3 flex flex-wrap items-center gap-x-6 gap-y-2.5">
+              <div className="flex items-center gap-2 text-xs font-semibold text-[#526461] dark:text-paw-warm-sage/80">
+                <WifiOff className="w-4 h-4 text-[#245C4A] dark:text-paw-sage" />
+                <span>Works Offline</span>
               </div>
-
-              <div className="text-xs">
-                <span className="text-[#526461] dark:text-paw-warm-sage/70 font-medium">Trusted by </span>
-                <span className="font-extrabold text-[#243638] dark:text-white">10K+ pet parents</span>
-                <span className="text-[#245C4A] dark:text-paw-warm-sage ml-1 font-bold">♥</span>
+              <div className="flex items-center gap-2 text-xs font-semibold text-[#526461] dark:text-paw-warm-sage/80">
+                <Lock className="w-4 h-4 text-[#245C4A] dark:text-paw-sage" />
+                <span>Secure &amp; Private</span>
+              </div>
+              <div className="flex items-center gap-2 text-xs font-semibold text-[#526461] dark:text-paw-warm-sage/80">
+                <RefreshCw className="w-4 h-4 text-[#245C4A] dark:text-paw-sage" />
+                <span>Auto Sync</span>
               </div>
             </div>
 
@@ -232,7 +216,7 @@ export const HeroSection: React.FC = () => {
             <div className="absolute top-20 right-0 sm:right-6 z-20 text-[#6F9F89] text-base font-script animate-float-slow pointer-events-none">
               ♥
             </div>
-            <div className="absolute top-28 right-8 z-10 text-[#7EA995] text-xs font-script opacity-60 pointer-events-none">
+            <div className="absolute top-28 right-8 z-10 text-paw-honey text-xs font-script opacity-80 pointer-events-none">
               ✦
             </div>
 

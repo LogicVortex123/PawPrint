@@ -121,59 +121,63 @@ export const Analytics: React.FC = () => {
           </div>
         </div>
 
-        {/* KPI Cards */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+        {/* Stat strip — one unified bar with divided segments, not four
+           separate boxed cards, so it reads differently from the card-based
+           sections below it rather than repeating the same shape again. */}
+        <div className="bg-[#FAFAF6] dark:bg-paw-darksurface rounded-[28px] border border-paw-soft-sage/70 dark:border-paw-darkborder shadow-soft p-6 sm:p-8">
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-8 lg:divide-x divide-paw-soft-sage/50 dark:divide-paw-darkborder">
 
-          <div className="bg-[#FAFAF6] dark:bg-paw-darksurface rounded-3xl p-6 border border-paw-soft-sage/70 dark:border-paw-darkborder shadow-soft hover:shadow-soft-lg transition-all flex items-center gap-4">
-            <div className="w-14 h-14 rounded-full bg-[#E2EDE6] dark:bg-paw-darkcard text-paw-forest dark:text-paw-warm-sage flex items-center justify-center flex-shrink-0">
-              <PawIcon className="w-7 h-7" />
+            <div className="flex items-center gap-3.5">
+              <div className="w-11 h-11 rounded-full bg-[#E2EDE6] dark:bg-paw-darkcard text-paw-forest dark:text-paw-warm-sage flex items-center justify-center flex-shrink-0">
+                <PawIcon className="w-5 h-5" />
+              </div>
+              <div>
+                <span className="text-[11px] font-bold uppercase tracking-wider text-paw-secondary dark:text-paw-warm-sage">Registered Pets</span>
+                <div className="text-xl sm:text-2xl font-extrabold text-paw-dark dark:text-white leading-tight">{totalPets} {totalPets === 1 ? 'Pet' : 'Pets'}</div>
+                <span className="text-[11px] font-semibold text-emerald-700 dark:text-emerald-400">
+                  {avgPetWeight ? `Avg weight: ${avgPetWeight} kg` : 'Log weights to see avg'}
+                </span>
+              </div>
             </div>
-            <div>
-              <span className="text-xs font-bold uppercase tracking-wider text-paw-secondary dark:text-paw-warm-sage">Registered Pets</span>
-              <div className="text-2xl sm:text-3xl font-extrabold text-paw-dark dark:text-white mt-0.5">{totalPets} {totalPets === 1 ? 'Pet' : 'Pets'}</div>
-              <span className="text-[11px] font-semibold text-emerald-700 dark:text-emerald-400">
-                {avgPetWeight ? `Avg weight: ${avgPetWeight} kg` : 'Log weights to see avg'}
-              </span>
+
+            <div className="flex items-center gap-3.5 lg:pl-8">
+              <div className="w-11 h-11 rounded-full bg-[#DEF7EC] dark:bg-emerald-950/40 text-emerald-800 dark:text-emerald-300 flex items-center justify-center flex-shrink-0">
+                <ShieldCheck className="w-5 h-5" />
+              </div>
+              <div>
+                <span className="text-[11px] font-bold uppercase tracking-wider text-paw-secondary dark:text-paw-warm-sage">Vaccines Up to Date</span>
+                <div className="text-xl sm:text-2xl font-extrabold text-paw-dark dark:text-white leading-tight">{completedVaxCount} Completed</div>
+                <span className={`text-[11px] font-semibold ${upcomingVaxCount > 0 ? 'text-amber-600 dark:text-amber-400' : 'text-paw-forest dark:text-paw-sage'}`}>
+                  {upcomingVaxCount > 0 ? `${upcomingVaxCount} upcoming soon` : overdueVaxCount > 0 ? `${overdueVaxCount} overdue!` : totalVaxCount === 0 ? 'No vaccinations logged' : 'All up to date ✓'}
+                </span>
+              </div>
             </div>
+
+            <div className="flex items-center gap-3.5 lg:pl-8">
+              <div className="w-11 h-11 rounded-full bg-amber-50 dark:bg-amber-950/40 text-amber-700 dark:text-amber-300 flex items-center justify-center flex-shrink-0">
+                <Calendar className="w-5 h-5" />
+              </div>
+              <div>
+                <span className="text-[11px] font-bold uppercase tracking-wider text-paw-secondary dark:text-paw-warm-sage">Upcoming Visits</span>
+                <div className="text-xl sm:text-2xl font-extrabold text-paw-dark dark:text-white leading-tight">{upcomingAppointments.length} Scheduled</div>
+                <span className="text-[11px] font-semibold text-amber-700 dark:text-amber-400">
+                  {nextAppointment ? `Next: ${nextAppointment.date}` : 'No upcoming visits'}
+                </span>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-3.5 lg:pl-8">
+              <div className="w-11 h-11 rounded-full bg-teal-50 dark:bg-teal-950/40 text-teal-700 dark:text-teal-300 flex items-center justify-center flex-shrink-0">
+                <Award className="w-5 h-5" />
+              </div>
+              <div>
+                <span className="text-[11px] font-bold uppercase tracking-wider text-paw-secondary dark:text-paw-warm-sage">Care Score</span>
+                <div className="text-xl sm:text-2xl font-extrabold text-paw-dark dark:text-white leading-tight">{careScore} / 100</div>
+                <span className={`text-[11px] font-semibold ${careScore >= 90 ? 'text-emerald-700 dark:text-emerald-400' : careScore >= 70 ? 'text-amber-700 dark:text-amber-400' : 'text-rose-700 dark:text-rose-400'}`}>{careLabel}</span>
+              </div>
+            </div>
+
           </div>
-
-          <div className="bg-[#FAFAF6] dark:bg-paw-darksurface rounded-3xl p-6 border border-paw-soft-sage/70 dark:border-paw-darkborder shadow-soft hover:shadow-soft-lg transition-all flex items-center gap-4">
-            <div className="w-14 h-14 rounded-full bg-[#DEF7EC] dark:bg-emerald-950/40 text-emerald-800 dark:text-emerald-300 flex items-center justify-center flex-shrink-0">
-              <ShieldCheck className="w-7 h-7" />
-            </div>
-            <div>
-              <span className="text-xs font-bold uppercase tracking-wider text-paw-secondary dark:text-paw-warm-sage">Vaccines Up to Date</span>
-              <div className="text-2xl sm:text-3xl font-extrabold text-paw-dark dark:text-white mt-0.5">{completedVaxCount} Completed</div>
-              <span className={`text-[11px] font-semibold ${upcomingVaxCount > 0 ? 'text-amber-600 dark:text-amber-400' : 'text-paw-forest dark:text-paw-sage'}`}>
-                {upcomingVaxCount > 0 ? `${upcomingVaxCount} upcoming soon` : overdueVaxCount > 0 ? `${overdueVaxCount} overdue!` : totalVaxCount === 0 ? 'No vaccinations logged' : 'All up to date ✓'}
-              </span>
-            </div>
-          </div>
-
-          <div className="bg-white dark:bg-paw-darksurface rounded-3xl p-6 border border-paw-soft-sage/60 dark:border-paw-darkborder shadow-soft flex items-center gap-4">
-            <div className="w-14 h-14 rounded-2xl bg-amber-50 dark:bg-amber-950/40 text-amber-700 dark:text-amber-300 flex items-center justify-center flex-shrink-0">
-              <Calendar className="w-7 h-7" />
-            </div>
-            <div>
-              <span className="text-xs font-bold uppercase tracking-wider text-paw-secondary dark:text-paw-warm-sage">Upcoming Visits</span>
-              <div className="text-2xl sm:text-3xl font-extrabold text-paw-dark dark:text-white mt-0.5">{upcomingAppointments.length} Scheduled</div>
-              <span className="text-[11px] font-semibold text-amber-700 dark:text-amber-400">
-                {nextAppointment ? `Next: ${nextAppointment.date}` : 'No upcoming visits'}
-              </span>
-            </div>
-          </div>
-
-          <div className="bg-white dark:bg-paw-darksurface rounded-3xl p-6 border border-paw-soft-sage/60 dark:border-paw-darkborder shadow-soft flex items-center gap-4">
-            <div className="w-14 h-14 rounded-2xl bg-teal-50 dark:bg-teal-950/40 text-teal-700 dark:text-teal-300 flex items-center justify-center flex-shrink-0">
-              <Award className="w-7 h-7" />
-            </div>
-            <div>
-              <span className="text-xs font-bold uppercase tracking-wider text-paw-secondary dark:text-paw-warm-sage">Care Score</span>
-              <div className="text-2xl sm:text-3xl font-extrabold text-paw-dark dark:text-white mt-0.5">{careScore} / 100</div>
-              <span className={`text-[11px] font-semibold ${careScore >= 90 ? 'text-emerald-700 dark:text-emerald-400' : careScore >= 70 ? 'text-amber-700 dark:text-amber-400' : 'text-rose-700 dark:text-rose-400'}`}>{careLabel}</span>
-            </div>
-          </div>
-
         </div>
 
         {/* Weight Chart + Vaccination Matrix */}

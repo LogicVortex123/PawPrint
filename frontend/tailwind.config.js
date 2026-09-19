@@ -20,6 +20,8 @@ export default {
           dark: '#243638',         // Dark Text
           secondary: '#526461',    // Secondary Text
           white: '#FFFFFF',
+          honey: '#F0B94D',        // Warm Yellow Accent (sparing use)
+          'honey-soft': '#FBEACB', // Pale Warm Yellow (badge/highlight backgrounds)
           // Dark mode specific surfaces
           darkbg: '#0F241E',
           darksurface: '#17362D',

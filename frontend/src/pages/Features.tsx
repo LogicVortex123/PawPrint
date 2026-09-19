@@ -901,41 +901,151 @@ export const Features: React.FC = () => {
             </div>
           )}
 
-          {/* 9. Reminders */}
-          {activeTab === 'reminders' && (
-            <div className="space-y-8 animate-fadeIn">
-              <div className="pb-6 border-b border-paw-soft-sage/30 dark:border-paw-darkborder/50">
-                <div className="inline-flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-paw-forest dark:text-paw-sage"><Bell className="w-4 h-4" /><span>Feature 09 · Smart Reminders</span></div>
-                <h2 className="text-3xl font-extrabold text-paw-dark dark:text-white">Never Miss a Vital Care Step</h2>
-              </div>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                {[
-                  { title: 'Vaccine Expiry Alerts', timing: '30, 7, and 1 day prior', desc: 'Proactive warnings before boosters lapse to maintain boarding and travel eligibility.' },
-                  { title: 'Appointment Confirmations', timing: '24 hours prior', desc: 'Clinic address, doctor name, and fasting/dietary prep instructions sent directly to phone.' },
-                  { title: 'Monthly Preventatives', timing: 'First of each month', desc: 'Heartworm, flea, and tick chewable reminders customized for each pet\'s prescription cycle.' },
-                ].map((rem, i) => (
-                  <div key={i} className="bg-paw-cream dark:bg-paw-darkcard p-6 rounded-3xl border border-paw-soft-sage/60 dark:border-paw-darkborder shadow-soft space-y-3">
-                    <div className="w-10 h-10 rounded-2xl bg-paw-light-sage dark:bg-paw-darksurface text-paw-forest dark:text-paw-warm-sage flex items-center justify-center"><Bell className="w-5 h-5" /></div>
-                    <h3 className="text-base font-bold text-paw-dark dark:text-white">{rem.title}</h3>
-                    <div className="text-[11px] font-semibold text-paw-forest dark:text-paw-sage">{rem.timing}</div>
-                    <p className="text-xs text-paw-secondary dark:text-paw-warm-sage leading-relaxed">{rem.desc}</p>
+          {/* 9. Smart Reminders — computed live from this pet's real vaccinations,
+               appointments and weight history, not a static informational panel. */}
+          {activeTab === 'reminders' && (() => {
+            const daysUntil = (dateStr: string) => {
+              const target = new Date(dateStr);
+              if (Number.isNaN(target.getTime())) return null;
+              const now = new Date();
+              now.setHours(0, 0, 0, 0);
+              target.setHours(0, 0, 0, 0);
+              return Math.round((target.getTime() - now.getTime()) / 86400000);
+            };
+
+            type Reminder = {
+              id: string;
+              urgency: 'urgent' | 'upcoming' | 'info';
+              icon: React.ReactNode;
+              title: string;
+              subtitle: string;
+              when: string;
+            };
+
+            const reminders: Reminder[] = [];
+
+            for (const v of vaccinations.filter((v) => v.petId === pet.id)) {
+              const days = daysUntil(v.nextDueDate);
+              if (days === null) continue;
+              if (v.status === 'overdue') {
+                reminders.push({ id: `vax-${v.id}`, urgency: 'urgent', icon: <Syringe className="w-4 h-4" />, title: `${v.name} is overdue`, subtitle: `Was due ${v.nextDueDate} — book a vet visit soon.`, when: `${Math.abs(days)}d overdue` });
+              } else if (days <= 30) {
+                reminders.push({ id: `vax-${v.id}`, urgency: 'upcoming', icon: <Syringe className="w-4 h-4" />, title: `${v.name} due soon`, subtitle: `Next dose due ${v.nextDueDate} at ${v.clinic}.`, when: days === 0 ? 'Today' : `in ${days}d` });
+              }
+            }
+
+            for (const apt of appointments.filter((a) => a.petId === pet.id && a.status === 'upcoming')) {
+              const days = daysUntil(apt.date);
+              if (days === null || days < 0) continue;
+              reminders.push({
+                id: `apt-${apt.id}`,
+                urgency: days <= 2 ? 'urgent' : 'upcoming',
+                icon: <Calendar className="w-4 h-4" />,
+                title: apt.reason || 'Vet appointment',
+                subtitle: `${apt.clinicName}${apt.time ? ` · ${apt.time}` : ''}`,
+                when: days === 0 ? 'Today' : days === 1 ? 'Tomorrow' : `in ${days}d`,
+              });
+            }
+
+            if (petWeights.length === 0) {
+              reminders.push({ id: 'weight-nudge', urgency: 'info', icon: <Scale className="w-4 h-4" />, title: 'No weight logged yet', subtitle: `Log ${pet.name}'s first weigh-in to start tracking body condition trends.`, when: 'Anytime' });
+            }
+
+            const urgent = reminders.filter((r) => r.urgency === 'urgent');
+            const upcoming = reminders.filter((r) => r.urgency === 'upcoming');
+            const info = reminders.filter((r) => r.urgency === 'info');
+
+            const urgencyStyles: Record<Reminder['urgency'], string> = {
+              urgent: 'bg-rose-50 dark:bg-rose-950/25 border-rose-200 dark:border-rose-900/40 text-rose-800 dark:text-rose-300',
+              upcoming: 'bg-amber-50 dark:bg-amber-950/25 border-amber-200 dark:border-amber-900/40 text-amber-800 dark:text-amber-300',
+              info: 'bg-sky-50 dark:bg-sky-950/25 border-sky-200 dark:border-sky-900/40 text-sky-800 dark:text-sky-300',
+            };
+
+            const ReminderRow = ({ r }: { r: Reminder }) => (
+              <div className={`flex items-start gap-3 p-4 rounded-2xl border ${urgencyStyles[r.urgency]}`}>
+                <div className="w-8 h-8 rounded-xl bg-white/70 dark:bg-black/20 flex items-center justify-center flex-shrink-0">{r.icon}</div>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center justify-between gap-2">
+                    <h4 className="text-sm font-bold text-paw-dark dark:text-white truncate">{r.title}</h4>
+                    <span className="text-[10px] font-extrabold uppercase tracking-wide whitespace-nowrap">{r.when}</span>
                   </div>
-                ))}
+                  <p className="text-xs mt-0.5 opacity-90">{r.subtitle}</p>
+                </div>
               </div>
-              {/* Overdue vaccination reminder */}
-              {vaccinations.filter(v => v.petId === pet.id && v.status === 'overdue').length > 0 && (
-                <div className="p-4 rounded-2xl bg-rose-50 dark:bg-rose-950/30 border border-rose-200 dark:border-rose-900/40 flex items-start gap-3">
-                  <AlertCircle className="w-5 h-5 text-rose-600 flex-shrink-0 mt-0.5" />
-                  <div>
-                    <div className="font-bold text-sm text-rose-800 dark:text-rose-300">Action Required: Overdue Vaccinations</div>
-                    <div className="text-xs text-rose-700 dark:text-rose-400 mt-1">
-                      {vaccinations.filter(v => v.petId === pet.id && v.status === 'overdue').map(v => v.name).join(', ')} — please schedule a vet visit soon.
+            );
+
+            return (
+              <div className="space-y-8 animate-fadeIn">
+                <div className="pb-6 border-b border-paw-soft-sage/30 dark:border-paw-darkborder/50">
+                  <div className="inline-flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-paw-forest dark:text-paw-sage"><Bell className="w-4 h-4" /><span>Feature 09 · Smart Reminders</span></div>
+                  <h2 className="text-3xl font-extrabold text-paw-dark dark:text-white">{pet.name}'s Care Feed</h2>
+                  <p className="text-paw-secondary dark:text-paw-warm-sage/80 text-sm pt-1">Live, computed from {pet.name}'s actual vaccination and appointment records — not a preview.</p>
+                </div>
+
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                  {/* Action feed — 2/3 width */}
+                  <div className="lg:col-span-2 space-y-6">
+                    {reminders.length === 0 ? (
+                      <div className="text-center py-14 rounded-3xl bg-emerald-50 dark:bg-emerald-950/20 border border-emerald-200 dark:border-emerald-900/40">
+                        <CheckCircle2 className="w-10 h-10 mx-auto mb-3 text-emerald-600 dark:text-emerald-400" />
+                        <p className="font-bold text-emerald-800 dark:text-emerald-300">{pet.name} is all caught up!</p>
+                        <p className="text-xs text-emerald-700 dark:text-emerald-400 mt-1">No overdue vaccinations or upcoming appointments right now.</p>
+                      </div>
+                    ) : (
+                      <>
+                        {urgent.length > 0 && (
+                          <div className="space-y-2.5">
+                            <div className="flex items-center gap-1.5 text-xs font-extrabold uppercase tracking-wider text-rose-700 dark:text-rose-400"><AlertCircle className="w-3.5 h-3.5" /><span>Needs Attention Now ({urgent.length})</span></div>
+                            {urgent.map((r) => <ReminderRow key={r.id} r={r} />)}
+                          </div>
+                        )}
+                        {upcoming.length > 0 && (
+                          <div className="space-y-2.5">
+                            <div className="flex items-center gap-1.5 text-xs font-extrabold uppercase tracking-wider text-amber-700 dark:text-amber-400"><Clock3 className="w-3.5 h-3.5" /><span>Coming Up ({upcoming.length})</span></div>
+                            {upcoming.map((r) => <ReminderRow key={r.id} r={r} />)}
+                          </div>
+                        )}
+                        {info.length > 0 && (
+                          <div className="space-y-2.5">
+                            <div className="flex items-center gap-1.5 text-xs font-extrabold uppercase tracking-wider text-sky-700 dark:text-sky-400"><Bell className="w-3.5 h-3.5" /><span>Suggestions</span></div>
+                            {info.map((r) => <ReminderRow key={r.id} r={r} />)}
+                          </div>
+                        )}
+                      </>
+                    )}
+                  </div>
+
+                  {/* Summary + how it works — 1/3 width */}
+                  <div className="space-y-6">
+                    <div className="bg-paw-cream dark:bg-paw-darkcard rounded-3xl p-6 border border-paw-soft-sage/60 dark:border-paw-darkborder space-y-4">
+                      <h3 className="text-xs font-extrabold uppercase tracking-wider text-paw-forest dark:text-paw-sage">At a Glance</h3>
+                      <div className="grid grid-cols-3 gap-2 text-center">
+                        <div>
+                          <div className="text-2xl font-extrabold text-rose-600 dark:text-rose-400">{urgent.length}</div>
+                          <div className="text-[10px] text-paw-secondary dark:text-paw-warm-sage font-semibold">Urgent</div>
+                        </div>
+                        <div>
+                          <div className="text-2xl font-extrabold text-amber-600 dark:text-amber-400">{upcoming.length}</div>
+                          <div className="text-[10px] text-paw-secondary dark:text-paw-warm-sage font-semibold">Upcoming</div>
+                        </div>
+                        <div>
+                          <div className="text-2xl font-extrabold text-paw-forest dark:text-paw-sage">{vaccinations.filter(v => v.petId === pet.id && v.status === 'completed').length}</div>
+                          <div className="text-[10px] text-paw-secondary dark:text-paw-warm-sage font-semibold">Up to Date</div>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="bg-paw-light-sage/50 dark:bg-paw-darkcard/50 rounded-3xl p-6 border border-paw-soft-sage/60 dark:border-paw-darkborder space-y-3">
+                      <h3 className="text-xs font-extrabold uppercase tracking-wider text-paw-forest dark:text-paw-sage">How Reminders Reach You</h3>
+                      <p className="text-xs text-paw-secondary dark:text-paw-warm-sage leading-relaxed">
+                        On the PawPrint mobile app, this exact feed is delivered as push notifications via Expo Notifications. On web, it's live right here — refresh anytime, or just check back before {pet.name}'s next visit.
+                      </p>
                     </div>
                   </div>
                 </div>
-              )}
-            </div>
-          )}
+              </div>
+            );
+          })()}
 
         </div>
       </div>
