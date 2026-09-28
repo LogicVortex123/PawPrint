@@ -9,6 +9,15 @@ const userSchema = new mongoose.Schema(
     passwordHash: { type: String, select: false },
     googleId: { type: String, unique: true, sparse: true },
     authProvider: { type: String, enum: ['local', 'google'], required: true },
+    // Account Settings: which reminders the user wants to see, and how early
+    preferences: {
+      reminders: {
+        vaccination: { type: Boolean, default: true },
+        appointment: { type: Boolean, default: true },
+        weight: { type: Boolean, default: true },
+      },
+      reminderLeadDays: { type: Number, default: 14, min: 1, max: 60 },
+    },
   },
   { timestamps: true }
 );

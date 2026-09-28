@@ -1,6 +1,7 @@
 const multer = require('multer');
 const path = require('path');
 const crypto = require('crypto');
+const ApiError = require('../utils/ApiError');
 
 // TR-010: backs pet photo and medical document uploads. Stores to local disk
 // for this project's scope; swap the storage engine for cloud storage without
@@ -20,7 +21,7 @@ const upload = multer({
   limits: { fileSize: 10 * 1024 * 1024 },
   fileFilter: (req, file, cb) => {
     if (!allowedMimeTypes.includes(file.mimetype)) {
-      return cb(new Error('Unsupported file type'));
+      return cb(new ApiError(400, 'Unsupported file type — use JPG, PNG, WebP or PDF'));
     }
     cb(null, true);
   },

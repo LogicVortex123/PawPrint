@@ -1,7 +1,7 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import {
-  PawPrint, Shield, TrendingUp, Calendar, MapPin, FileText, Clock, Cloud,
+  PawPrint, Shield, TrendingUp, Calendar, MapPin, FileText, Clock, Siren,
   Syringe, ArrowRight, ArrowUpRight,
 } from 'lucide-react';
 import { PawIcon } from '../common/OrganicDeco';
@@ -19,7 +19,7 @@ const compactFeatures = [
   { title: 'Vet Appointments', desc: 'Book & manage', icon: Calendar },
   { title: 'Nearby Clinics', desc: 'Ranked by distance', icon: MapPin },
   { title: 'Medical Documents', desc: 'Stored, always on hand', icon: FileText },
-  { title: 'Offline-First', desc: 'Your data, with you', icon: Cloud },
+  { title: 'Emergency Mode', desc: 'Key info in one tap', icon: Siren },
 ];
 
 export const FeaturesGrid: React.FC = () => {

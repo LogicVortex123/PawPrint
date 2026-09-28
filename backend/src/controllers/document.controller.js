@@ -2,6 +2,7 @@ const Document = require('../models/Document.model');
 const asyncHandler = require('../utils/asyncHandler');
 const ApiError = require('../utils/ApiError');
 const { findOwnedPetOrFail } = require('../services/petAccess.service');
+const { removeUploadedFile } = require('../services/uploadFiles.service');
 
 // GET /pets/:id/documents
 const listForPet = asyncHandler(async (req, res) => {
@@ -36,4 +37,15 @@ const createForPet = asyncHandler(async (req, res) => {
   res.status(201).json(document);
 });
 
-module.exports = { listForPet, createForPet };
+// DELETE /documents/:id — removes the record and the file on disk
+const remove = asyncHandler(async (req, res) => {
+  const document = await Document.findById(req.params.id);
+  if (!document) throw new ApiError(404, 'Document not found');
+  await findOwnedPetOrFail(document.pet, req.userId);
+
+  await document.deleteOne();
+  await removeUploadedFile(document.fileUrl);
+  res.status(204).send();
+});
+
+module.exports = { listForPet, createForPet, remove };

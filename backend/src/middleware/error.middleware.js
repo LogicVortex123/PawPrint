@@ -1,6 +1,21 @@
 const ApiError = require('../utils/ApiError');
 
-function errorMiddleware(err, req, res, next) {
+// Known client-side mistakes from multer/mongoose, turned into readable 400s
+// instead of falling through to the generic 500 below
+function toClientError(err) {
+  if (err.name === 'MulterError') {
+    return new ApiError(400, err.code === 'LIMIT_FILE_SIZE' ? 'File is too large (max 10 MB)' : 'Upload failed');
+  }
+  if (err.name === 'ValidationError') {
+    const first = Object.values(err.errors || {})[0];
+    return new ApiError(400, first?.message || 'Some fields are invalid');
+  }
+  if (err.name === 'CastError') return new ApiError(400, `Invalid value for ${err.path}`);
+  return err;
+}
+
+function errorMiddleware(rawErr, req, res, next) {
+  const err = toClientError(rawErr);
   const isApiError = err instanceof ApiError;
   const statusCode = isApiError ? err.statusCode : 500;
 

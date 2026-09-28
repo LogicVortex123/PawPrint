@@ -25,17 +25,30 @@ const createForPet = asyncHandler(async (req, res) => {
   res.status(201).json(withStatus(vaccination));
 });
 
+// Loads a vaccination and confirms its pet belongs to the current user
+async function findOwnedVaccinationOrFail(id, userId) {
+  const vaccination = await Vaccination.findById(id);
+  if (!vaccination) throw new ApiError(404, 'Vaccination not found');
+  await findOwnedPetOrFail(vaccination.pet, userId);
+  return vaccination;
+}
+
 // PUT /vaccinations/:id — top-level route, not nested under /pets
 const update = asyncHandler(async (req, res) => {
-  const vaccination = await Vaccination.findById(req.params.id);
-  if (!vaccination) throw new ApiError(404, 'Vaccination not found');
+  const vaccination = await findOwnedVaccinationOrFail(req.params.id, req.userId);
 
-  // Double-check the pet belongs to the current user before allowing edits
-  await findOwnedPetOrFail(vaccination.pet, req.userId);
-
-  Object.assign(vaccination, req.body);
+  // The pet a record belongs to can't be reassigned through an edit
+  const { pet, ...changes } = req.body;
+  Object.assign(vaccination, changes);
   await vaccination.save();
   res.json(withStatus(vaccination));
 });
 
-module.exports = { listForPet, createForPet, update };
+// DELETE /vaccinations/:id
+const remove = asyncHandler(async (req, res) => {
+  const vaccination = await findOwnedVaccinationOrFail(req.params.id, req.userId);
+  await vaccination.deleteOne();
+  res.status(204).send();
+});
+
+module.exports = { listForPet, createForPet, update, remove };

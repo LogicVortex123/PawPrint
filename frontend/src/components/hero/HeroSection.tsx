@@ -1,7 +1,7 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { PhoneMockup } from './PhoneMockup';
-import { ArrowRight, Wifi, WifiOff, Lock, RefreshCw } from 'lucide-react';
+import { ArrowRight, ShieldCheck, Siren, Lock, FileDown } from 'lucide-react';
 
 export const HeroSection: React.FC = () => {
   return (
@@ -70,10 +70,10 @@ export const HeroSection: React.FC = () => {
             {/* Subtle organic warmth behind heading */}
             <div className="absolute -top-10 -left-10 w-96 h-96 bg-[#E8F2EC]/50 dark:bg-paw-darksurface/25 rounded-full blur-3xl -z-10 pointer-events-none" />
             
-            {/* Pill badge with Wifi/signal */}
+            {/* Pill badge */}
             <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-[#E5EFE8] dark:bg-paw-darksurface border border-[#D0E2D5] dark:border-paw-darkborder text-xs font-bold text-[#245C4A] dark:text-paw-warm-sage shadow-2xs">
-              <Wifi className="w-3.5 h-3.5 text-[#245C4A] dark:text-paw-sage stroke-[2.2]" />
-              <span>Offline-First · Secure · Always With You</span>
+              <ShieldCheck className="w-3.5 h-3.5 text-[#245C4A] dark:text-paw-sage stroke-[2.2]" />
+              <span>Organized · Secure · Always With You</span>
             </div>
 
             {/* Large Heading */}
@@ -93,7 +93,7 @@ export const HeroSection: React.FC = () => {
 
             {/* Supporting paragraph */}
             <p className="text-base sm:text-lg text-[#526461] dark:text-paw-warm-sage/90 max-w-lg leading-relaxed font-normal">
-              PawPrint helps you keep track of your pet’s health, care and special moments — all in one place. Even when you’re offline.
+              PawPrint helps you keep track of your pet’s health, care and special moments — all in one place, ready whenever the vet asks.
             </p>
 
             {/* Action Buttons */}
@@ -117,16 +117,16 @@ export const HeroSection: React.FC = () => {
             {/* Trust indicators — what the product actually does, not a made-up stat */}
             <div className="pt-3 flex flex-wrap items-center gap-x-6 gap-y-2.5">
               <div className="flex items-center gap-2 text-xs font-semibold text-[#526461] dark:text-paw-warm-sage/80">
-                <WifiOff className="w-4 h-4 text-[#245C4A] dark:text-paw-sage" />
-                <span>Works Offline</span>
+                <Siren className="w-4 h-4 text-[#245C4A] dark:text-paw-sage" />
+                <span>1-Tap Emergency Mode</span>
               </div>
               <div className="flex items-center gap-2 text-xs font-semibold text-[#526461] dark:text-paw-warm-sage/80">
                 <Lock className="w-4 h-4 text-[#245C4A] dark:text-paw-sage" />
                 <span>Secure &amp; Private</span>
               </div>
               <div className="flex items-center gap-2 text-xs font-semibold text-[#526461] dark:text-paw-warm-sage/80">
-                <RefreshCw className="w-4 h-4 text-[#245C4A] dark:text-paw-sage" />
-                <span>Auto Sync</span>
+                <FileDown className="w-4 h-4 text-[#245C4A] dark:text-paw-sage" />
+                <span>PDF Health Summary</span>
               </div>
             </div>
 

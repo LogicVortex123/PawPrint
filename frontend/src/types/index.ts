@@ -11,6 +11,7 @@ export interface Pet {
   weight: number; // in kg
   targetWeightRange: [number, number];
   photo: string;
+  hasCustomPhoto: boolean;
   allergies: string[];
   medications: string[];
   microchipId: string;
@@ -39,7 +40,9 @@ export interface WeightRecord {
   id: string;
   petId: string;
   date: string;
+  recordedAt: string; // ISO timestamp — used for sorting and the edit form
   weight: number;
+  trendPercent: number | null; // % change vs the previous weigh-in, computed by the backend
   note?: string;
 }
 
@@ -47,8 +50,10 @@ export interface Appointment {
   id: string;
   petId: string;
   clinicName: string;
+  clinicAddress: string;
   date: string;
   time: string;
+  dateISO: string; // raw appointment timestamp — used for sorting and the edit form
   veterinarian: string;
   reason: string;
   status: 'upcoming' | 'completed' | 'cancelled';
@@ -76,8 +81,8 @@ export interface MedicalDocument {
   title: string;
   category: DocumentCategory;
   date: string;
+  uploadedAt: string; // ISO timestamp
   fileSize: string;
-  syncedOffline: boolean;
   fileUrl?: string;
 }
 
@@ -87,6 +92,28 @@ export interface HealthTimelineEntry {
   title: string;
   category: 'vaccination' | 'weight' | 'appointment' | 'document';
   date: string;
+  sortDate: string; // ISO timestamp — `date` is display-formatted and can't be sorted as a string
   description: string;
   statusColor?: string;
 }
+
+export interface UserPreferences {
+  reminders: { vaccination: boolean; appointment: boolean; weight: boolean };
+  reminderLeadDays: number;
+}
+
+export const DEFAULT_PREFERENCES: UserPreferences = {
+  reminders: { vaccination: true, appointment: true, weight: true },
+  reminderLeadDays: 14,
+};
+
+export interface AuthUser {
+  id: string;
+  name: string;
+  email: string;
+  authProvider: string;
+  hasPassword?: boolean;
+  preferences?: UserPreferences;
+}
+
+export type ThemePreference = 'light' | 'dark' | 'system';

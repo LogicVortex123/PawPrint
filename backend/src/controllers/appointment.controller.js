@@ -27,14 +27,28 @@ const create = asyncHandler(async (req, res) => {
   res.status(201).json(appointment);
 });
 
-// PUT /appointments/:id
+// PUT /appointments/:id — also how an appointment is cancelled or completed (status field)
 const update = asyncHandler(async (req, res) => {
   const appointment = await Appointment.findOne({ _id: req.params.id, owner: req.userId });
   if (!appointment) throw new ApiError(404, 'Appointment not found');
 
-  Object.assign(appointment, req.body);
+  const { owner, pet, ...changes } = req.body;
+  // Moving an appointment to another pet is allowed, but only to one the user owns
+  if (pet && String(pet) !== String(appointment.pet)) {
+    await findOwnedPetOrFail(pet, req.userId);
+    appointment.pet = pet;
+  }
+
+  Object.assign(appointment, changes);
   await appointment.save();
   res.json(appointment);
 });
 
-module.exports = { list, create, update };
+// DELETE /appointments/:id
+const remove = asyncHandler(async (req, res) => {
+  const result = await Appointment.deleteOne({ _id: req.params.id, owner: req.userId });
+  if (result.deletedCount === 0) throw new ApiError(404, 'Appointment not found');
+  res.status(204).send();
+});
+
+module.exports = { list, create, update, remove };

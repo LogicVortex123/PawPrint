@@ -22,7 +22,7 @@ export const Footer: React.FC = () => {
   ];
 
   return (
-    <footer className="relative bg-[#1A3E34] text-white overflow-hidden pt-16 pb-8 transition-colors duration-200">
+    <footer className="print:hidden relative bg-[#1A3E34] text-white overflow-hidden pt-16 pb-8 transition-colors duration-200">
 
       {/* Organic wavy top border, matching the hill silhouettes used elsewhere on the site */}
       <div className="absolute top-0 left-0 right-0 w-full overflow-hidden leading-none pointer-events-none -translate-y-[98%]">
@@ -52,7 +52,7 @@ export const Footer: React.FC = () => {
             </Link>
 
             <p className="text-sm text-[#C9DFD2] leading-relaxed max-w-sm">
-              Offline-first pet care &amp; health tracking. Care for their health, keep their memories — even without an internet connection.
+              Pet care &amp; health tracking. Care for their health, keep their records together, and stay ready for any vet visit.
             </p>
 
             <div className="flex items-center gap-3 pt-1">

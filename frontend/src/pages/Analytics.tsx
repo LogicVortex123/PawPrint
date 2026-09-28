@@ -333,7 +333,7 @@ export const Analytics: React.FC = () => {
               <Activity className="w-5 h-5 text-paw-forest dark:text-paw-sage" />
               <h3 className="text-xl font-bold text-paw-dark dark:text-white">Recent Health Log Activity</h3>
             </div>
-            <span className="text-xs text-paw-secondary dark:text-paw-warm-sage font-semibold">Live sync active</span>
+            <span className="text-xs text-paw-secondary dark:text-paw-warm-sage font-semibold">Latest records</span>
           </div>
 
           {timeline.filter(t => t.petId === pet.id).length === 0 ? (

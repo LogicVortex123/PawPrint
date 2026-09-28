@@ -1,11 +1,10 @@
 const router = require('express').Router();
 const requireAuth = require('../middleware/auth.middleware');
-const { list, create, update, remove } = require('../controllers/appointment.controller');
+const { update, remove } = require('../controllers/weight.controller');
 
+// Top-level like /vaccinations/:id — list/create stay nested under /pets/:id/weights
 router.use(requireAuth);
 
-router.get('/', list);
-router.post('/', create);
 router.put('/:id', update);
 router.delete('/:id', remove);
 

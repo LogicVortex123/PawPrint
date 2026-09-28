@@ -1,7 +1,7 @@
 const router = require('express').Router();
 const requireAuth = require('../middleware/auth.middleware');
 const upload = require('../middleware/upload.middleware');
-const { listPets, getPet, createPet, updatePet, deletePet } = require('../controllers/pet.controller');
+const { listPets, getPet, createPet, updatePet, uploadPhoto, deletePet } = require('../controllers/pet.controller');
 const vaccinationController = require('../controllers/vaccination.controller');
 const weightController = require('../controllers/weight.controller');
 const documentController = require('../controllers/document.controller');
@@ -13,6 +13,7 @@ router.post('/', createPet);
 router.get('/:id', getPet);
 router.put('/:id', updatePet);
 router.delete('/:id', deletePet);
+router.post('/:id/photo', upload.single('photo'), uploadPhoto);
 
 // Nested per TRD Section 7: GET/POST /pets/:id/vaccinations|weights|documents
 router.get('/:id/vaccinations', vaccinationController.listForPet);

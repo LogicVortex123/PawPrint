@@ -169,3 +169,15 @@
 .scrollbar-none::-webkit-scrollbar {
   display: none;
 }
+
+/* Health Summary PDF export: paper margins and exact colours when printing */
+@page {
+  margin: 14mm;
+}
+
+@media print {
+  body {
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+}

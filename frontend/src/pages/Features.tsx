@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
+import { Link, useSearchParams } from 'react-router-dom';
 import {
   PawPrint,
   Syringe,
@@ -7,7 +8,6 @@ import {
   MapPin,
   FileText,
   Clock,
-  WifiOff,
   Bell,
   CheckCircle2,
   AlertCircle,
@@ -21,11 +21,32 @@ import {
   Trash2,
   Loader2,
   Navigation,
+  Pencil,
+  Camera,
+  Siren,
+  FileDown,
+  TrendingUp,
+  TrendingDown,
 } from 'lucide-react';
 import { useAppStore } from '../store/useAppStore';
 import { PawIcon } from '../components/common/OrganicDeco';
+import { inputCls } from '../components/common/Modal';
+import { EditVaccinationModal, EditWeightModal, EditAppointmentModal } from '../components/dashboard/RecordEditModals';
+import { fileUrl } from '../lib/api';
+import { downloadAppointmentIcs } from '../lib/calendar';
+import { useDraft } from '../lib/useDraft';
+import { StorageKeys, readJson, writeJson, removeKey } from '../lib/storage';
+import { DEFAULT_PREFERENCES, HealthTimelineEntry, Vaccination, WeightRecord, Appointment } from '../types';
 
-const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+export const DASHBOARD_TABS = ['pet-profiles', 'vaccinations', 'weight-tracking', 'vet-appointments', 'nearby-clinics', 'medical-documents', 'health-timeline', 'reminders'] as const;
+
+const TIMELINE_FILTERS: { key: 'all' | HealthTimelineEntry['category']; label: string }[] = [
+  { key: 'all', label: 'All' },
+  { key: 'vaccination', label: 'Vaccinations' },
+  { key: 'weight', label: 'Weight' },
+  { key: 'appointment', label: 'Appointments' },
+  { key: 'document', label: 'Documents' },
+];
 
 export const Features: React.FC = () => {
   const {
@@ -36,14 +57,13 @@ export const Features: React.FC = () => {
     selectedPet,
     createPet,
     updatePet,
+    uploadPetPhoto,
     deletePet,
     vaccinations,
     weightRecords,
     appointments,
     documents,
     timeline,
-    isOnline,
-    toggleNetworkSimulation,
     clinics,
     clinicsLoading,
     clinicsError,
@@ -53,36 +73,75 @@ export const Features: React.FC = () => {
     addVaccination,
     bookAppointment,
     uploadDocument,
+    deleteDocument,
+    updateAppointment,
+    user,
     showToast,
   } = useAppStore();
 
-  const [activeTab, setActiveTab] = useState<string>('pet-profiles');
+  // Active tab and pet live in the URL (?tab=...&pet=...) so sections can be
+  // deep-linked and bookmarked, and global search can jump straight to them
+  const [searchParams, setSearchParams] = useSearchParams();
+  const tabParam = searchParams.get('tab');
+  const activeTab: string = tabParam && (DASHBOARD_TABS as readonly string[]).includes(tabParam) ? tabParam : 'pet-profiles';
+  const setActiveTab = (tab: string) => {
+    setSearchParams((prev) => { const next = new URLSearchParams(prev); next.set('tab', tab); return next; }, { replace: true });
+  };
+  const petParam = searchParams.get('pet');
+  useEffect(() => {
+    if (petParam && pets.some((p) => p.id === petParam)) setSelectedPetId(petParam);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [petParam, pets.length]);
+  const selectPet = (id: string) => {
+    setSelectedPetId(id);
+    setSearchParams((prev) => { const next = new URLSearchParams(prev); next.set('pet', id); return next; }, { replace: true });
+  };
+
+  const [timelineFilter, setTimelineFilter] = useState<'all' | HealthTimelineEntry['category']>('all');
+  const [editingVax, setEditingVax] = useState<Vaccination | null>(null);
+  const [editingWeight, setEditingWeight] = useState<WeightRecord | null>(null);
+  const [editingApt, setEditingApt] = useState<Appointment | null>(null);
+  const [deletingDocId, setDeletingDocId] = useState<string | null>(null);
+  const photoInputRef = useRef<HTMLInputElement>(null);
+  const [uploadingPhoto, setUploadingPhoto] = useState(false);
   const [vaxFilter, setVaxFilter] = useState<'all' | 'completed' | 'upcoming' | 'overdue'>('all');
   const [newWeightInput, setNewWeightInput] = useState<string>('');
   const [weightLoading, setWeightLoading] = useState(false);
 
   // Create pet form
-  const [newPetName, setNewPetName] = useState('');
-  const [newPetSpecies, setNewPetSpecies] = useState<'dog' | 'cat' | 'other'>('dog');
-  const [newPetBreed, setNewPetBreed] = useState('');
+  // Form fields below are drafts saved to localStorage, so a refresh or an
+  // accidentally closed tab doesn't lose what was typed
+  const newPetDraft = useDraft('new-pet', { name: '', species: 'dog' as 'dog' | 'cat' | 'other', breed: '' });
+  const { name: newPetName, species: newPetSpecies, breed: newPetBreed } = newPetDraft.value;
+  const setNewPetName = (name: string) => newPetDraft.update({ name });
+  const setNewPetSpecies = (species: 'dog' | 'cat' | 'other') => newPetDraft.update({ species });
+  const setNewPetBreed = (breed: string) => newPetDraft.update({ breed });
+
+  // Vaccination and appointment drafts are kept per pet
+  const draftPetId = selectedPet()?.id || 'none';
   const [creatingPet, setCreatingPet] = useState(false);
 
   // Add vaccination form
-  const [showVaxForm, setShowVaxForm] = useState(false);
-  const [vaxName, setVaxName] = useState('');
-  const [vaxAdminDate, setVaxAdminDate] = useState('');
-  const [vaxNextDue, setVaxNextDue] = useState('');
-  const [vaxVet, setVaxVet] = useState('');
-  const [vaxClinic, setVaxClinic] = useState('');
-  const [vaxBatch, setVaxBatch] = useState('');
+  const vaxDraft = useDraft(`vaccination-${draftPetId}`, { name: '', adminDate: '', nextDue: '', vet: '', clinic: '', batch: '' });
+  const { name: vaxName, adminDate: vaxAdminDate, nextDue: vaxNextDue, vet: vaxVet, clinic: vaxClinic, batch: vaxBatch } = vaxDraft.value;
+  const setVaxName = (name: string) => vaxDraft.update({ name });
+  const setVaxAdminDate = (adminDate: string) => vaxDraft.update({ adminDate });
+  const setVaxNextDue = (nextDue: string) => vaxDraft.update({ nextDue });
+  const setVaxVet = (vet: string) => vaxDraft.update({ vet });
+  const setVaxClinic = (clinic: string) => vaxDraft.update({ clinic });
+  const setVaxBatch = (batch: string) => vaxDraft.update({ batch });
+  // Reopen the form if there's an unfinished entry waiting
+  const [showVaxForm, setShowVaxForm] = useState(vaxDraft.hasDraft);
   const [savingVax, setSavingVax] = useState(false);
 
   // Book appointment form
-  const [showAptForm, setShowAptForm] = useState(false);
-  const [aptClinic, setAptClinic] = useState('');
-  const [aptDate, setAptDate] = useState('');
-  const [aptReason, setAptReason] = useState('');
-  const [aptNotes, setAptNotes] = useState('');
+  const aptDraft = useDraft(`appointment-${draftPetId}`, { clinic: '', date: '', reason: '', notes: '' });
+  const { clinic: aptClinic, date: aptDate, reason: aptReason, notes: aptNotes } = aptDraft.value;
+  const setAptClinic = (clinic: string) => aptDraft.update({ clinic });
+  const setAptDate = (date: string) => aptDraft.update({ date });
+  const setAptReason = (reason: string) => aptDraft.update({ reason });
+  const setAptNotes = (notes: string) => aptDraft.update({ notes });
+  const [showAptForm, setShowAptForm] = useState(aptDraft.hasDraft);
   const [savingApt, setSavingApt] = useState(false);
 
   // Upload document
@@ -93,6 +152,7 @@ export const Features: React.FC = () => {
   // Edit pet profile modal
   const [showEditPet, setShowEditPet] = useState(false);
   const [editName, setEditName] = useState('');
+  const [editSpecies, setEditSpecies] = useState<'dog' | 'cat' | 'other'>('dog');
   const [editBreed, setEditBreed] = useState('');
   const [editGender, setEditGender] = useState<'male' | 'female'>('male');
   const [editDob, setEditDob] = useState('');
@@ -126,6 +186,28 @@ export const Features: React.FC = () => {
     );
   };
 
+  // Save the edit-profile form while it's open so a refresh doesn't lose edits
+  useEffect(() => {
+    const editingPet = selectedPet();
+    if (!showEditPet || !editingPet) return;
+    const draft: EditPetDraft = {
+      name: editName, species: editSpecies, breed: editBreed, gender: editGender, dob: editDob,
+      allergies: editAllergies, medications: editMedications, contactName: editContactName,
+      contactPhone: editContactPhone, microchipId: editMicrochipId,
+    };
+    writeJson(editDraftKey(editingPet.id), draft);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [showEditPet, editName, editSpecies, editBreed, editGender, editDob, editAllergies, editMedications, editContactName, editContactPhone, editMicrochipId]);
+
+  // Escape closes the edit-profile modal, like the other dialogs
+  useEffect(() => {
+    if (!showEditPet) return;
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') closeEditPet(); };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [showEditPet]);
+
   // Auto-request clinics the first time that tab is opened — kept above any
   // early return so hook order stays stable across renders (Rules of Hooks).
   useEffect(() => {
@@ -141,7 +223,7 @@ export const Features: React.FC = () => {
     setCreatingPet(true);
     try {
       await createPet({ name: newPetName.trim(), species: newPetSpecies, breed: newPetBreed.trim() || undefined });
-      setNewPetName(''); setNewPetBreed('');
+      newPetDraft.clear();
     } catch (err) {
       showToast(`❌ ${err instanceof Error ? err.message : 'Could not create pet profile — please try again.'}`);
     } finally { setCreatingPet(false); }
@@ -178,7 +260,7 @@ export const Features: React.FC = () => {
         clinic: vaxClinic || undefined,
         batchNumber: vaxBatch || undefined,
       });
-      setVaxName(''); setVaxAdminDate(''); setVaxNextDue(''); setVaxVet(''); setVaxClinic(''); setVaxBatch('');
+      vaxDraft.clear();
       setShowVaxForm(false);
     } catch (err) {
       showToast(`❌ ${err instanceof Error ? err.message : 'Could not save vaccination — please try again.'}`);
@@ -193,7 +275,7 @@ export const Features: React.FC = () => {
     setSavingApt(true);
     try {
       await bookAppointment({ pet: pet.id, clinicName: aptClinic.trim(), date: aptDate, reason: aptReason || undefined, notes: aptNotes || undefined });
-      setAptClinic(''); setAptDate(''); setAptReason(''); setAptNotes('');
+      aptDraft.clear();
       setShowAptForm(false);
     } catch (err) {
       showToast(`❌ ${err instanceof Error ? err.message : 'Could not book appointment — please try again.'}`);
@@ -220,18 +302,78 @@ export const Features: React.FC = () => {
     }
   };
 
+  const handlePhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (photoInputRef.current) photoInputRef.current.value = '';
+    if (!pet || !file) return;
+    if (!file.type.startsWith('image/')) { showToast('⚠️ Please choose an image file (JPG, PNG or WebP).'); return; }
+    if (file.size > 10 * 1024 * 1024) { showToast('⚠️ Photo is too large. Maximum size is 10 MB.'); return; }
+    setUploadingPhoto(true);
+    try {
+      await uploadPetPhoto(pet.id, file);
+    } catch (err) {
+      showToast(`❌ ${err instanceof Error ? err.message : 'Could not upload photo — please try again.'}`);
+    } finally { setUploadingPhoto(false); }
+  };
+
+  const handleDeleteDocument = async (id: string, title: string) => {
+    if (!window.confirm(`Delete "${title}" from the vault? The file will be removed permanently.`)) return;
+    setDeletingDocId(id);
+    try {
+      await deleteDocument(id);
+    } catch (err) {
+      showToast(`❌ ${err instanceof Error ? err.message : 'Could not delete document — please try again.'}`);
+    } finally { setDeletingDocId(null); }
+  };
+
+  const handleAppointmentStatus = async (apt: Appointment, status: 'completed' | 'cancelled') => {
+    if (status === 'cancelled' && !window.confirm(`Cancel the appointment at ${apt.clinicName} on ${apt.date}?`)) return;
+    try {
+      await updateAppointment(apt.id, { status });
+    } catch (err) {
+      showToast(`❌ ${err instanceof Error ? err.message : 'Could not update appointment — please try again.'}`);
+    }
+  };
+
+  type EditPetDraft = {
+    name: string; species: 'dog' | 'cat' | 'other'; breed: string; gender: 'male' | 'female'; dob: string;
+    allergies: string; medications: string; contactName: string; contactPhone: string; microchipId: string;
+  };
+  const editDraftKey = (petId: string) => `${StorageKeys.draftPrefix}edit-pet-${petId}`;
+
   const openEditPet = () => {
     if (!pet) return;
-    setEditName(pet.name);
-    setEditBreed(pet.breed || '');
-    setEditGender(pet.gender === 'Female' ? 'female' : 'male');
-    setEditDob(pet.dob || '');
-    setEditAllergies(pet.allergies.filter((a) => a !== 'No known allergies recorded').join(', '));
-    setEditMedications(pet.medications.filter((m) => m !== 'No active medications recorded').join(', '));
-    setEditContactName(pet.emergencyContact.name === 'Not set' ? '' : pet.emergencyContact.name);
-    setEditContactPhone(pet.emergencyContact.phone);
-    setEditMicrochipId(pet.microchipId === 'Not recorded' ? '' : pet.microchipId);
+    const draft = readJson<EditPetDraft | null>(editDraftKey(pet.id), null);
+    const fields: EditPetDraft = draft ?? {
+      name: pet.name,
+      species: pet.species,
+      breed: pet.breed || '',
+      gender: pet.gender === 'Female' ? 'female' : 'male',
+      dob: pet.dob || '',
+      allergies: pet.allergies.join(', '),
+      medications: pet.medications.join(', '),
+      contactName: pet.emergencyContact.name,
+      contactPhone: pet.emergencyContact.phone,
+      microchipId: pet.microchipId,
+    };
+    setEditName(fields.name);
+    setEditSpecies(fields.species);
+    setEditBreed(fields.breed);
+    setEditGender(fields.gender);
+    setEditDob(fields.dob);
+    setEditAllergies(fields.allergies);
+    setEditMedications(fields.medications);
+    setEditContactName(fields.contactName);
+    setEditContactPhone(fields.contactPhone);
+    setEditMicrochipId(fields.microchipId);
     setShowEditPet(true);
+    if (draft) showToast(`📝 Restored your unsaved changes to ${pet.name}'s profile.`);
+  };
+
+  // Closing the modal (cancel, save or delete) discards the saved draft
+  const closeEditPet = () => {
+    if (pet) removeKey(editDraftKey(pet.id));
+    setShowEditPet(false);
   };
 
   const handleUpdatePet = async (e: React.FormEvent) => {
@@ -242,17 +384,18 @@ export const Features: React.FC = () => {
     try {
       await updatePet(pet.id, {
         name: editName.trim(),
-        breed: editBreed.trim() || undefined,
+        species: editSpecies,
+        breed: editBreed.trim(),
         gender: editGender,
         dateOfBirth: editDob || undefined,
         allergies: editAllergies.split(',').map((s) => s.trim()).filter(Boolean),
         medications: editMedications.split(',').map((s) => s.trim()).filter(Boolean),
-        microchipId: editMicrochipId.trim() || undefined,
+        microchipId: editMicrochipId.trim(),
         emergencyContacts: editContactName.trim()
           ? [{ name: editContactName.trim(), phone: editContactPhone.trim() }]
           : [],
       });
-      setShowEditPet(false);
+      closeEditPet();
     } catch (err) {
       showToast(`❌ ${err instanceof Error ? err.message : 'Could not update pet profile — please try again.'}`);
     } finally { setSavingPet(false); }
@@ -263,6 +406,7 @@ export const Features: React.FC = () => {
     if (!window.confirm(`Delete ${pet.name}'s profile? This cannot be undone.`)) return;
     setDeletingPet(true);
     try {
+      removeKey(editDraftKey(pet.id));
       await deletePet(pet.id);
       setShowEditPet(false);
     } catch (err) {
@@ -319,6 +463,8 @@ export const Features: React.FC = () => {
   const petAppointments = appointments.filter((a) => a.petId === pet.id);
   const petDocuments = documents.filter((d) => d.petId === pet.id);
   const petTimeline = timeline.filter((t) => t.petId === pet.id);
+  const filteredTimeline = timelineFilter === 'all' ? petTimeline : petTimeline.filter((t) => t.category === timelineFilter);
+  const latestWeight = petWeights[petWeights.length - 1];
 
   const featureTabs = [
     { id: 'pet-profiles', label: 'Pet Profiles', icon: PawPrint },
@@ -328,11 +474,8 @@ export const Features: React.FC = () => {
     { id: 'nearby-clinics', label: 'Nearby Clinics', icon: MapPin },
     { id: 'medical-documents', label: 'Medical Vault', icon: FileText },
     { id: 'health-timeline', label: 'Timeline', icon: Clock },
-    { id: 'offline-first', label: 'Offline Sync', icon: WifiOff },
     { id: 'reminders', label: 'Smart Reminders', icon: Bell },
   ];
-
-  const inputCls = "w-full px-4 py-2.5 rounded-xl border border-paw-soft-sage dark:border-paw-darkborder bg-paw-cream dark:bg-paw-darkcard text-paw-dark dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-paw-forest";
 
   return (
     <div className="py-12 lg:py-20 transition-colors duration-200 relative overflow-hidden">
@@ -358,12 +501,23 @@ export const Features: React.FC = () => {
           <div className="pt-6 flex flex-wrap items-center justify-center gap-3">
             <span className="text-xs font-bold text-paw-secondary dark:text-paw-warm-sage uppercase tracking-wider">Viewing as:</span>
             {pets.map((p) => (
-              <button key={p.id} onClick={() => setSelectedPetId(p.id)}
+              <button key={p.id} onClick={() => selectPet(p.id)}
                 className={`flex items-center gap-2 px-4 py-2 rounded-full text-xs font-bold transition-all ${selectedPetId === p.id ? 'bg-paw-forest text-white shadow-soft-lg scale-105' : 'bg-white dark:bg-paw-darksurface text-paw-dark dark:text-paw-warm-sage border border-paw-soft-sage dark:border-paw-darkborder hover:bg-paw-light-sage/40'}`}>
                 <img src={p.photo} alt={p.name} className="w-5 h-5 rounded-full object-cover" onError={(e) => { (e.target as HTMLImageElement).src = `https://api.dicebear.com/7.x/thumbs/svg?seed=${p.name}`; }} />
                 <span>{p.name} ({p.species === 'dog' ? '🐶 Dog' : p.species === 'cat' ? '🐱 Cat' : '🐾 Other'})</span>
               </button>
             ))}
+          </div>
+          {/* Quick actions for the selected pet */}
+          <div className="pt-2 flex flex-wrap items-center justify-center gap-3">
+            <Link to={`/emergency?pet=${pet.id}`}
+              className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full text-sm font-bold bg-rose-600 text-white hover:bg-rose-700 shadow-soft transition-colors">
+              <Siren className="w-4 h-4" /><span>Emergency Mode</span>
+            </Link>
+            <Link to={`/pets/${pet.id}/summary`}
+              className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full text-sm font-bold bg-white dark:bg-paw-darksurface text-paw-forest dark:text-paw-warm-sage border border-paw-soft-sage dark:border-paw-darkborder hover:bg-paw-light-sage/40 transition-colors">
+              <FileDown className="w-4 h-4" /><span>Export Health Summary (PDF)</span>
+            </Link>
           </div>
         </div>
 
@@ -405,12 +559,20 @@ export const Features: React.FC = () => {
               </div>
               <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
                 <div className="bg-paw-cream dark:bg-paw-darkcard rounded-3xl p-6 border border-paw-soft-sage/50 dark:border-paw-darkborder text-center space-y-4">
-                  <div className="relative w-36 h-36 mx-auto rounded-full overflow-hidden border-4 border-white dark:border-paw-darkbg shadow-soft-lg">
-                    <img src={pet.photo} alt={pet.name} className="w-full h-full object-cover" onError={(e) => { (e.target as HTMLImageElement).src = `https://api.dicebear.com/7.x/thumbs/svg?seed=${pet.name}`; }} />
+                  <div className="relative w-36 h-36 mx-auto">
+                    <div className="w-full h-full rounded-full overflow-hidden border-4 border-white dark:border-paw-darkbg shadow-soft-lg">
+                      <img src={pet.photo} alt={pet.name} className="w-full h-full object-cover" onError={(e) => { (e.target as HTMLImageElement).src = `https://api.dicebear.com/7.x/thumbs/svg?seed=${pet.name}`; }} />
+                    </div>
+                    <button type="button" onClick={() => photoInputRef.current?.click()} disabled={uploadingPhoto}
+                      title={pet.hasCustomPhoto ? 'Change photo' : 'Upload a photo'} aria-label={pet.hasCustomPhoto ? 'Change photo' : 'Upload a photo'}
+                      className="absolute bottom-1 right-1 w-10 h-10 rounded-full bg-paw-forest text-white flex items-center justify-center shadow-soft-lg hover:bg-paw-deep disabled:opacity-60 border-2 border-white dark:border-paw-darkbg">
+                      {uploadingPhoto ? <Loader2 className="w-4 h-4 animate-spin" /> : <Camera className="w-4 h-4" />}
+                    </button>
+                    <input ref={photoInputRef} type="file" accept="image/jpeg,image/png,image/webp" className="hidden" onChange={handlePhotoUpload} />
                   </div>
                   <div>
                     <h3 className="text-2xl font-extrabold text-paw-dark dark:text-white">{pet.name}</h3>
-                    <p className="text-sm font-semibold text-paw-forest dark:text-paw-sage">{pet.breed}</p>
+                    <p className="text-sm font-semibold text-paw-forest dark:text-paw-sage">{pet.breed || (pet.species === 'dog' ? 'Dog' : pet.species === 'cat' ? 'Cat' : 'Pet')}</p>
                     <p className="text-xs text-paw-secondary dark:text-paw-warm-sage/70">{pet.age} · {pet.gender}</p>
                   </div>
                   <div className="pt-2 flex justify-center gap-2 flex-wrap">
@@ -418,7 +580,7 @@ export const Features: React.FC = () => {
                       <span className="px-3 py-1 rounded-full text-[11px] font-bold bg-paw-soft-sage dark:bg-paw-darksurface text-paw-forest dark:text-paw-light-sage">⚖️ {pet.weight} kg</span>
                     )}
                     <span className="px-3 py-1 rounded-full text-[11px] font-bold bg-emerald-100 dark:bg-emerald-950 text-emerald-800 dark:text-emerald-300">
-                      {pet.microchipId !== 'Not recorded' ? '✓ Microchipped' : '○ No microchip'}
+                      {pet.microchipId ? '✓ Microchipped' : '○ No microchip'}
                     </span>
                   </div>
                 </div>
@@ -427,12 +589,14 @@ export const Features: React.FC = () => {
                     <div className="bg-rose-50 dark:bg-rose-950/20 rounded-2xl p-5 border border-rose-200/60 dark:border-rose-900/40">
                       <div className="flex items-center gap-2 text-rose-800 dark:text-rose-300 font-bold text-sm mb-2"><AlertCircle className="w-4 h-4" /><span>Known Allergies</span></div>
                       <ul className="space-y-1 text-xs text-rose-900 dark:text-rose-200">
+                        {pet.allergies.length === 0 && <li className="opacity-70">No known allergies recorded</li>}
                         {pet.allergies.map((a, i) => (<li key={i} className="flex items-center gap-1.5 font-medium"><span className="w-1.5 h-1.5 rounded-full bg-rose-500" />{a}</li>))}
                       </ul>
                     </div>
                     <div className="bg-emerald-50 dark:bg-emerald-950/20 rounded-2xl p-5 border border-emerald-200/60 dark:border-emerald-900/40">
                       <div className="flex items-center gap-2 text-emerald-800 dark:text-emerald-300 font-bold text-sm mb-2"><Shield className="w-4 h-4" /><span>Active Medications</span></div>
                       <ul className="space-y-1 text-xs text-emerald-900 dark:text-emerald-200">
+                        {pet.medications.length === 0 && <li className="opacity-70">No active medications recorded</li>}
                         {pet.medications.map((m, i) => (<li key={i} className="flex items-center gap-1.5 font-medium"><span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />{m}</li>))}
                       </ul>
                     </div>
@@ -441,7 +605,7 @@ export const Features: React.FC = () => {
                     <div className="text-xs font-bold uppercase tracking-wider text-paw-forest dark:text-paw-sage">Primary Veterinary Contact &amp; Microchip</div>
                     <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 text-sm">
                       <div>
-                        <div className="font-bold text-paw-dark dark:text-white">{pet.emergencyContact.name}</div>
+                        <div className="font-bold text-paw-dark dark:text-white">{pet.emergencyContact.name || 'No emergency contact yet — add one via Edit Profile'}</div>
                         <div className="text-xs text-paw-secondary dark:text-paw-warm-sage">{pet.emergencyContact.relation}</div>
                       </div>
                       {pet.emergencyContact.phone && (
@@ -452,7 +616,7 @@ export const Features: React.FC = () => {
                       )}
                     </div>
                     <div className="text-[11px] text-paw-secondary dark:text-paw-warm-sage pt-1">
-                      Universal Microchip ID: <span className="font-mono font-bold text-paw-dark dark:text-white">{pet.microchipId}</span>
+                      Universal Microchip ID: <span className="font-mono font-bold text-paw-dark dark:text-white">{pet.microchipId || 'Not recorded'}</span>
                     </div>
                   </div>
                 </div>
@@ -531,7 +695,13 @@ export const Features: React.FC = () => {
                             {vac.status}
                           </span>
                         </div>
-                        <h3 className="text-base font-bold text-paw-dark dark:text-white mb-1">{vac.name}</h3>
+                        <div className="flex items-start justify-between gap-2">
+                          <h3 className="text-base font-bold text-paw-dark dark:text-white mb-1">{vac.name}</h3>
+                          <button onClick={() => setEditingVax(vac)} title="Edit or delete" aria-label={`Edit ${vac.name}`}
+                            className="p-1.5 rounded-full text-paw-secondary hover:text-paw-forest hover:bg-paw-light-sage dark:hover:bg-paw-darksurface transition-colors">
+                            <Pencil className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
                         <p className="text-xs text-paw-secondary dark:text-paw-warm-sage">{vac.clinic} · {vac.veterinarian}</p>
                       </div>
                       <div className="mt-6 pt-4 border-t border-paw-soft-sage/30 dark:border-paw-darkborder/50 text-xs space-y-1.5">
@@ -553,6 +723,15 @@ export const Features: React.FC = () => {
                   <div className="inline-flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-paw-forest dark:text-paw-sage"><Scale className="w-4 h-4" /><span>Feature 03 · Weight Tracking</span></div>
                   <h2 className="text-3xl font-extrabold text-paw-dark dark:text-white">Historical Growth &amp; Body Condition</h2>
                   {pet.weight > 0 && <p className="text-paw-secondary dark:text-paw-warm-sage/80 text-sm pt-1">Current weight: <span className="font-bold text-paw-forest dark:text-paw-sage">{pet.weight} kg</span></p>}
+                  {latestWeight && latestWeight.trendPercent !== null && (
+                    <p className="text-xs pt-1 inline-flex items-center gap-1.5 text-paw-secondary dark:text-paw-warm-sage/80">
+                      {latestWeight.trendPercent >= 0 ? <TrendingUp className="w-3.5 h-3.5" /> : <TrendingDown className="w-3.5 h-3.5" />}
+                      {Math.abs(latestWeight.trendPercent) < 0.5
+                        ? 'Stable since the last weigh-in.'
+                        : `${latestWeight.trendPercent > 0 ? 'Up' : 'Down'} ${Math.abs(latestWeight.trendPercent)}% since the last weigh-in.`}
+                      {Math.abs(latestWeight.trendPercent) >= 10 && ' A change this size is worth mentioning at the next vet visit.'}
+                    </p>
+                  )}
                 </div>
                 <form onSubmit={handleAddWeight} className="flex flex-wrap items-center gap-3">
                   <input type="number" step="0.1" placeholder="Weight (kg)" value={newWeightInput} onChange={(e) => setNewWeightInput(e.target.value)}
@@ -566,6 +745,7 @@ export const Features: React.FC = () => {
               <div className="bg-paw-cream dark:bg-paw-darkcard rounded-3xl p-6 sm:p-8 border border-paw-soft-sage/60 dark:border-paw-darkborder">
                 <div className="flex items-center justify-between mb-4">
                   <span className="text-sm font-bold text-paw-dark dark:text-white">Historical Weigh-ins ({petWeights.length} records)</span>
+                  {petWeights.length > 0 && <span className="text-[11px] text-paw-secondary dark:text-paw-warm-sage">Click an entry to edit or delete it</span>}
                 </div>
                 {petWeights.length > 0 ? (
                   <>
@@ -605,11 +785,16 @@ export const Features: React.FC = () => {
                     </div>
                     <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-3 pt-4 border-t border-paw-soft-sage/40 dark:border-paw-darkborder/50">
                       {petWeights.map((w) => (
-                        <div key={w.id} className="bg-white dark:bg-paw-darksurface p-3 rounded-2xl text-center border border-paw-soft-sage/40 shadow-sm">
+                        <button key={w.id} onClick={() => setEditingWeight(w)} title="Edit or delete"
+                          className="bg-white dark:bg-paw-darksurface p-3 rounded-2xl text-center border border-paw-soft-sage/40 shadow-sm hover:border-paw-forest hover:shadow-soft transition-all">
                           <div className="text-[10px] text-paw-secondary dark:text-paw-warm-sage font-semibold">{w.date}</div>
                           <div className="text-base font-extrabold text-paw-forest dark:text-paw-light-sage">{w.weight} kg</div>
-                          {w.note && <div className="text-[9px] text-paw-secondary/80 truncate">{w.note}</div>}
-                        </div>
+                          {w.trendPercent !== null && (
+                            <div className={`text-[10px] font-bold ${w.trendPercent > 0 ? 'text-amber-600' : w.trendPercent < 0 ? 'text-sky-600' : 'text-paw-secondary'}`}>
+                              {w.trendPercent > 0 ? '▲' : w.trendPercent < 0 ? '▼' : '•'} {Math.abs(w.trendPercent)}%
+                            </div>
+                          )}
+                        </button>
                       ))}
                     </div>
                   </>
@@ -671,9 +856,15 @@ export const Features: React.FC = () => {
                     <div>
                       <div className="flex items-center justify-between mb-3">
                         <span className="text-xs font-extrabold text-paw-forest dark:text-paw-sage">{apt.date} {apt.time && `· ${apt.time}`}</span>
-                        <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase ${apt.status === 'upcoming' ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300' : 'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300'}`}>{apt.status}</span>
+                        <div className="flex items-center gap-1">
+                          <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase ${apt.status === 'upcoming' ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300' : apt.status === 'cancelled' ? 'bg-rose-100 text-rose-800 dark:bg-rose-950 dark:text-rose-300' : 'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300'}`}>{apt.status}</span>
+                          <button onClick={() => setEditingApt(apt)} title="Edit or delete" aria-label="Edit appointment"
+                            className="p-1.5 rounded-full text-paw-secondary hover:text-paw-forest hover:bg-paw-light-sage dark:hover:bg-paw-darksurface transition-colors">
+                            <Pencil className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
                       </div>
-                      <h3 className="text-base font-bold text-paw-dark dark:text-white mb-1">{apt.reason}</h3>
+                      <h3 className={`text-base font-bold text-paw-dark dark:text-white mb-1 ${apt.status === 'cancelled' ? 'line-through opacity-60' : ''}`}>{apt.reason}</h3>
                       <p className="text-xs text-paw-secondary dark:text-paw-warm-sage">{apt.clinicName}</p>
                       {apt.notes && (
                         <div className="mt-3 p-2.5 rounded-xl bg-white dark:bg-paw-darksurface text-[11px] text-paw-secondary dark:text-paw-warm-sage border border-paw-soft-sage/40">
@@ -681,9 +872,22 @@ export const Features: React.FC = () => {
                         </div>
                       )}
                     </div>
-                    <div className="mt-6 pt-4 border-t border-paw-soft-sage/30 dark:border-paw-darkborder/50 flex items-center justify-between text-xs">
-                      <button onClick={() => showToast('ℹ️ Calendar export coming in the next update!')} className="text-paw-forest dark:text-paw-warm-sage font-bold hover:underline">Add to Calendar</button>
-                      <button onClick={() => showToast(`ℹ️ Directions for ${apt.clinicName} will open in Maps.`)} className="text-paw-secondary dark:text-paw-warm-sage hover:underline">Directions →</button>
+                    <div className="mt-6 pt-4 border-t border-paw-soft-sage/30 dark:border-paw-darkborder/50 space-y-3 text-xs">
+                      {apt.status === 'upcoming' && (
+                        <div className="flex items-center gap-2">
+                          <button onClick={() => handleAppointmentStatus(apt, 'completed')}
+                            className="flex-1 px-3 py-1.5 rounded-full font-bold bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300 hover:bg-emerald-200 transition-colors">✓ Mark done</button>
+                          <button onClick={() => handleAppointmentStatus(apt, 'cancelled')}
+                            className="flex-1 px-3 py-1.5 rounded-full font-bold text-rose-700 dark:text-rose-400 border border-rose-200 dark:border-rose-900/40 hover:bg-rose-50 dark:hover:bg-rose-950/30 transition-colors">Cancel</button>
+                        </div>
+                      )}
+                      <div className="flex items-center justify-between">
+                        {apt.status === 'upcoming' ? (
+                          <button onClick={() => downloadAppointmentIcs(apt, pet.name)} className="text-paw-forest dark:text-paw-warm-sage font-bold hover:underline">Add to Calendar</button>
+                        ) : <span />}
+                        <a href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${apt.clinicName} ${apt.clinicAddress}`.trim())}`}
+                          target="_blank" rel="noopener noreferrer" className="text-paw-secondary dark:text-paw-warm-sage hover:underline">Directions →</a>
+                      </div>
                     </div>
                   </div>
                 ))}
@@ -792,7 +996,7 @@ export const Features: React.FC = () => {
                     className="flex items-center gap-1.5 px-5 py-2.5 rounded-full text-xs font-bold bg-paw-forest text-white hover:bg-paw-deep shadow-soft disabled:opacity-60">
                     <Upload className="w-3.5 h-3.5" /><span>{uploadingDoc ? 'Uploading…' : 'Upload Document'}</span>
                   </button>
-                  <input ref={fileInputRef} type="file" accept=".pdf,.jpg,.jpeg,.png,.doc,.docx" className="hidden" onChange={handleFileUpload} />
+                  <input ref={fileInputRef} type="file" accept=".pdf,.jpg,.jpeg,.png,.webp" className="hidden" onChange={handleFileUpload} />
                 </div>
               </div>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -800,7 +1004,7 @@ export const Features: React.FC = () => {
                   <div className="col-span-full text-center py-10 text-paw-secondary dark:text-paw-warm-sage/60">
                     <FileText className="w-10 h-10 mx-auto mb-3 opacity-40" />
                     <p className="font-semibold">No documents uploaded yet.</p>
-                    <p className="text-xs mt-1">Select a category and click “Upload Document” to add a PDF, image, or prescription to {pet.name}'s secure vault.</p>
+                    <p className="text-xs mt-1">Select a category and click “Upload Document” to add a PDF or image (JPG, PNG, WebP — up to 10 MB) to {pet.name}'s secure vault.</p>
                   </div>
                 ) : petDocuments.map((doc) => (
                   <div key={doc.id} className="bg-paw-cream dark:bg-paw-darkcard rounded-3xl p-6 border border-paw-soft-sage/60 dark:border-paw-darkborder shadow-soft flex items-start justify-between gap-4">
@@ -815,12 +1019,19 @@ export const Features: React.FC = () => {
                         <div className="mt-2 inline-flex items-center gap-1 text-[10px] font-bold text-emerald-800 dark:text-emerald-300 bg-emerald-100 dark:bg-emerald-950 px-2 py-0.5 rounded-full">✓ Stored in Vault</div>
                       </div>
                     </div>
-                    <a href={doc.fileUrl ? `${API_BASE}${doc.fileUrl}` : undefined} target="_blank" rel="noopener noreferrer"
-                      onClick={(e) => { if (!doc.fileUrl) { e.preventDefault(); showToast('⚠️ File not available.'); } }}
-                      className="p-2.5 rounded-full bg-white dark:bg-paw-darksurface text-paw-forest dark:text-paw-warm-sage hover:bg-paw-light-sage transition-colors shadow-sm"
-                      title="Open document">
-                      <Download className="w-4 h-4" />
-                    </a>
+                    <div className="flex flex-col gap-2">
+                      <a href={fileUrl(doc.fileUrl)} target="_blank" rel="noopener noreferrer"
+                        onClick={(e) => { if (!doc.fileUrl) { e.preventDefault(); showToast('⚠️ File not available.'); } }}
+                        className="p-2.5 rounded-full bg-white dark:bg-paw-darksurface text-paw-forest dark:text-paw-warm-sage hover:bg-paw-light-sage transition-colors shadow-sm"
+                        title="Open document" aria-label={`Open ${doc.title}`}>
+                        <Download className="w-4 h-4" />
+                      </a>
+                      <button onClick={() => handleDeleteDocument(doc.id, doc.title)} disabled={deletingDocId === doc.id}
+                        className="p-2.5 rounded-full bg-white dark:bg-paw-darksurface text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/30 transition-colors shadow-sm disabled:opacity-60"
+                        title="Delete document" aria-label={`Delete ${doc.title}`}>
+                        {deletingDocId === doc.id ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
+                      </button>
+                    </div>
                   </div>
                 ))}
               </div>
@@ -833,17 +1044,28 @@ export const Features: React.FC = () => {
               <div className="pb-6 border-b border-paw-soft-sage/30 dark:border-paw-darkborder/50">
                 <div className="inline-flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-paw-forest dark:text-paw-sage"><Clock className="w-4 h-4" /><span>Feature 07 · Health Timeline</span></div>
                 <h2 className="text-3xl font-extrabold text-paw-dark dark:text-white">Chronological Life Journey</h2>
-                <p className="text-paw-secondary dark:text-paw-warm-sage/80 text-sm pt-1">Every vaccination, checkup, weigh-in, and appointment mapped across their life.</p>
+                <p className="text-paw-secondary dark:text-paw-warm-sage/80 text-sm pt-1">Every vaccination, weigh-in, appointment, and document mapped across their life.</p>
+                <div className="flex flex-wrap items-center gap-1.5 pt-4">
+                  {TIMELINE_FILTERS.map(({ key, label }) => {
+                    const count = key === 'all' ? petTimeline.length : petTimeline.filter((t) => t.category === key).length;
+                    return (
+                      <button key={key} onClick={() => setTimelineFilter(key)}
+                        className={`px-3 py-1.5 rounded-full text-xs font-bold transition-colors ${timelineFilter === key ? 'bg-paw-forest text-white shadow-sm' : 'bg-paw-cream dark:bg-paw-darkcard text-paw-secondary dark:text-paw-warm-sage border border-paw-soft-sage/50 hover:text-paw-dark'}`}>
+                        {label} <span className="opacity-70">({count})</span>
+                      </button>
+                    );
+                  })}
+                </div>
               </div>
-              {petTimeline.length === 0 ? (
+              {filteredTimeline.length === 0 ? (
                 <div className="text-center py-10 text-paw-secondary dark:text-paw-warm-sage/60">
                   <Clock className="w-10 h-10 mx-auto mb-3 opacity-40" />
-                  <p className="font-semibold">No timeline events yet for {pet.name}.</p>
+                  <p className="font-semibold">{petTimeline.length === 0 ? `No timeline events yet for ${pet.name}.` : 'No events of this type yet.'}</p>
                   <p className="text-xs mt-1">Every vaccination, weigh-in, and appointment you log will appear here as a chronological life story.</p>
                 </div>
               ) : (
                 <div className="relative pl-6 sm:pl-8 space-y-8 before:absolute before:left-3 sm:before:left-4 before:top-2 before:bottom-2 before:w-0.5 before:bg-paw-soft-sage dark:before:bg-paw-darkborder">
-                  {petTimeline.map((entry) => (
+                  {filteredTimeline.map((entry) => (
                     <div key={entry.id} className="relative group">
                       <div className="absolute -left-6 sm:-left-8 top-1 w-4 h-4 rounded-full bg-white dark:bg-paw-darkbg border-4 border-paw-forest dark:border-paw-sage" />
                       <div className="bg-paw-cream dark:bg-paw-darkcard rounded-2xl p-5 border border-paw-soft-sage/50 dark:border-paw-darkborder shadow-soft group-hover:scale-[1.01] transition-transform">
@@ -861,47 +1083,7 @@ export const Features: React.FC = () => {
             </div>
           )}
 
-          {/* 8. Offline Sync */}
-          {activeTab === 'offline-first' && (
-            <div className="space-y-8 animate-fadeIn">
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-6 border-b border-paw-soft-sage/30 dark:border-paw-darkborder/50">
-                <div>
-                  <div className="inline-flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-paw-forest dark:text-paw-sage"><WifiOff className="w-4 h-4" /><span>Feature 08 · Offline-First Engine</span></div>
-                  <h2 className="text-3xl font-extrabold text-paw-dark dark:text-white">Zero Reception? Zero Problem.</h2>
-                </div>
-                <button onClick={toggleNetworkSimulation}
-                  className={`px-5 py-2.5 rounded-full text-xs font-bold transition-colors shadow-soft ${isOnline ? 'bg-amber-600 text-white hover:bg-amber-700' : 'bg-emerald-700 text-white hover:bg-emerald-800'}`}>
-                  Simulate {isOnline ? 'Network Disconnect' : 'Network Reconnect'}
-                </button>
-              </div>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-8 items-center">
-                <div className="space-y-4">
-                  <div className={`p-4 rounded-2xl border text-sm font-semibold flex items-center gap-3 ${isOnline ? 'bg-emerald-50 text-emerald-800 border-emerald-200 dark:bg-emerald-950/40 dark:text-emerald-300 dark:border-emerald-800' : 'bg-amber-50 text-amber-800 border-amber-200 dark:bg-amber-950/40 dark:text-amber-300 dark:border-amber-800'}`}>
-                    <span className="w-3 h-3 rounded-full bg-current animate-ping" />
-                    <span>Current Status: {isOnline ? '🟢 Connected to Cloud Backend' : '🟠 Offline Mode Active (Local SQLite Queue)'}</span>
-                  </div>
-                  <ul className="space-y-2 text-xs font-medium text-paw-dark dark:text-white">
-                    {['Instant UI updates with zero loading spinner delay', 'Automatic conflict-free reconciliation when network returns', 'Companion web app updates seamlessly on next browser session'].map((item, i) => (
-                      <li key={i} className="flex items-center gap-2"><CheckCircle2 className="w-4 h-4 text-paw-forest dark:text-paw-sage" /><span>{item}</span></li>
-                    ))}
-                  </ul>
-                </div>
-                <div className="bg-paw-cream dark:bg-paw-darkcard p-6 rounded-3xl border border-paw-soft-sage/60 dark:border-paw-darkborder text-center space-y-4">
-                  <div className="text-xs font-bold uppercase tracking-wider text-paw-forest dark:text-paw-sage">Architecture Workflow</div>
-                  <div className="flex items-center justify-center gap-2 text-xs font-bold text-paw-dark dark:text-white">
-                    <span className="px-3 py-1.5 rounded-xl bg-white dark:bg-paw-darksurface shadow-sm">Client Record</span>
-                    <span>→</span>
-                    <span className="px-3 py-1.5 rounded-xl bg-paw-light-sage dark:bg-paw-darksurface shadow-sm">SQLite Local</span>
-                    <span>→</span>
-                    <span className="px-3 py-1.5 rounded-xl bg-paw-forest text-white shadow-sm">Auto-Sync</span>
-                  </div>
-                  <p className="text-[11px] text-paw-secondary dark:text-paw-warm-sage">No data lost. No sync conflicts. Full peace of mind.</p>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* 9. Smart Reminders — computed live from this pet's real vaccinations,
+          {/* 8. Smart Reminders — computed live from this pet's real vaccinations,
                appointments and weight history, not a static informational panel. */}
           {activeTab === 'reminders' && (() => {
             const daysUntil = (dateStr: string) => {
@@ -923,20 +1105,23 @@ export const Features: React.FC = () => {
             };
 
             const reminders: Reminder[] = [];
+            // Which reminder types to show and how far ahead come from Account Settings
+            const prefs = user?.preferences ?? DEFAULT_PREFERENCES;
+            const leadDays = prefs.reminderLeadDays;
 
-            for (const v of vaccinations.filter((v) => v.petId === pet.id)) {
+            for (const v of prefs.reminders.vaccination ? vaccinations.filter((v) => v.petId === pet.id) : []) {
               const days = daysUntil(v.nextDueDate);
               if (days === null) continue;
               if (v.status === 'overdue') {
                 reminders.push({ id: `vax-${v.id}`, urgency: 'urgent', icon: <Syringe className="w-4 h-4" />, title: `${v.name} is overdue`, subtitle: `Was due ${v.nextDueDate} — book a vet visit soon.`, when: `${Math.abs(days)}d overdue` });
-              } else if (days <= 30) {
+              } else if (days <= leadDays) {
                 reminders.push({ id: `vax-${v.id}`, urgency: 'upcoming', icon: <Syringe className="w-4 h-4" />, title: `${v.name} due soon`, subtitle: `Next dose due ${v.nextDueDate} at ${v.clinic}.`, when: days === 0 ? 'Today' : `in ${days}d` });
               }
             }
 
-            for (const apt of appointments.filter((a) => a.petId === pet.id && a.status === 'upcoming')) {
-              const days = daysUntil(apt.date);
-              if (days === null || days < 0) continue;
+            for (const apt of prefs.reminders.appointment ? appointments.filter((a) => a.petId === pet.id && a.status === 'upcoming') : []) {
+              const days = daysUntil(apt.dateISO);
+              if (days === null || days < 0 || days > leadDays) continue;
               reminders.push({
                 id: `apt-${apt.id}`,
                 urgency: days <= 2 ? 'urgent' : 'upcoming',
@@ -947,8 +1132,15 @@ export const Features: React.FC = () => {
               });
             }
 
-            if (petWeights.length === 0) {
-              reminders.push({ id: 'weight-nudge', urgency: 'info', icon: <Scale className="w-4 h-4" />, title: 'No weight logged yet', subtitle: `Log ${pet.name}'s first weigh-in to start tracking body condition trends.`, when: 'Anytime' });
+            if (prefs.reminders.weight) {
+              if (petWeights.length === 0) {
+                reminders.push({ id: 'weight-nudge', urgency: 'info', icon: <Scale className="w-4 h-4" />, title: 'No weight logged yet', subtitle: `Log ${pet.name}'s first weigh-in to start tracking body condition trends.`, when: 'Anytime' });
+              } else {
+                const sinceLast = daysUntil(latestWeight.recordedAt);
+                if (sinceLast !== null && sinceLast <= -30) {
+                  reminders.push({ id: 'weight-stale', urgency: 'info', icon: <Scale className="w-4 h-4" />, title: 'Time for a weigh-in', subtitle: `${pet.name}'s last weight was logged ${Math.abs(sinceLast)} days ago.`, when: 'This week' });
+                }
+              }
             }
 
             const urgent = reminders.filter((r) => r.urgency === 'urgent');
@@ -977,9 +1169,12 @@ export const Features: React.FC = () => {
             return (
               <div className="space-y-8 animate-fadeIn">
                 <div className="pb-6 border-b border-paw-soft-sage/30 dark:border-paw-darkborder/50">
-                  <div className="inline-flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-paw-forest dark:text-paw-sage"><Bell className="w-4 h-4" /><span>Feature 09 · Smart Reminders</span></div>
+                  <div className="inline-flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-paw-forest dark:text-paw-sage"><Bell className="w-4 h-4" /><span>Feature 08 · Smart Reminders</span></div>
                   <h2 className="text-3xl font-extrabold text-paw-dark dark:text-white">{pet.name}'s Care Feed</h2>
-                  <p className="text-paw-secondary dark:text-paw-warm-sage/80 text-sm pt-1">Live, computed from {pet.name}'s actual vaccination and appointment records — not a preview.</p>
+                  <p className="text-paw-secondary dark:text-paw-warm-sage/80 text-sm pt-1">
+                    Live, computed from {pet.name}'s actual records. Showing the next {leadDays} days —{' '}
+                    <Link to="/settings" className="font-semibold text-paw-forest dark:text-paw-sage hover:underline">change reminder settings</Link>.
+                  </p>
                 </div>
 
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
@@ -1050,16 +1245,20 @@ export const Features: React.FC = () => {
         </div>
       </div>
 
+      {editingVax && <EditVaccinationModal vaccination={editingVax} onClose={() => setEditingVax(null)} />}
+      {editingWeight && <EditWeightModal record={editingWeight} onClose={() => setEditingWeight(null)} />}
+      {editingApt && <EditAppointmentModal appointment={editingApt} onClose={() => setEditingApt(null)} />}
+
       {/* Edit Pet Profile Modal */}
       {showEditPet && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm" onClick={() => setShowEditPet(false)}>
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm" onClick={closeEditPet}>
           <div
             className="w-full max-w-lg max-h-[90vh] overflow-y-auto bg-[#FAFAF6] dark:bg-paw-darksurface rounded-[28px] p-6 sm:p-8 border border-paw-soft-sage/70 dark:border-paw-darkborder shadow-soft-xl"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="flex items-center justify-between mb-6">
               <h3 className="text-xl font-extrabold text-paw-dark dark:text-white">Edit {pet.name}'s Profile</h3>
-              <button onClick={() => setShowEditPet(false)} className="text-paw-secondary hover:text-paw-dark dark:hover:text-white">
+              <button onClick={closeEditPet} className="text-paw-secondary hover:text-paw-dark dark:hover:text-white">
                 <X className="w-5 h-5" />
               </button>
             </div>
@@ -1071,6 +1270,14 @@ export const Features: React.FC = () => {
               </div>
 
               <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-bold uppercase tracking-wider text-paw-secondary dark:text-paw-warm-sage mb-1.5">Species</label>
+                  <select value={editSpecies} onChange={(e) => setEditSpecies(e.target.value as 'dog' | 'cat' | 'other')} className={inputCls}>
+                    <option value="dog">🐶 Dog</option>
+                    <option value="cat">🐱 Cat</option>
+                    <option value="other">🐾 Other</option>
+                  </select>
+                </div>
                 <div>
                   <label className="block text-xs font-bold uppercase tracking-wider text-paw-secondary dark:text-paw-warm-sage mb-1.5">Breed</label>
                   <input value={editBreed} onChange={(e) => setEditBreed(e.target.value)} className={inputCls} />

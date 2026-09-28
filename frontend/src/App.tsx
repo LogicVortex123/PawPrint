@@ -10,6 +10,9 @@ import { Roadmap } from './pages/Roadmap';
 import { Analytics } from './pages/Analytics';
 import { Login } from './pages/Login';
 import { Signup } from './pages/Signup';
+import { Settings } from './pages/Settings';
+import { EmergencyMode } from './pages/EmergencyMode';
+import { HealthSummary } from './pages/HealthSummary';
 import { useAppStore } from './store/useAppStore';
 
 function ScrollToTop() {
@@ -35,7 +38,7 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
 }
 
 export const App: React.FC = () => {
-  const { theme, isAuthenticated, fetchPets } = useAppStore();
+  const { theme, isAuthenticated, fetchPets, fetchMe } = useAppStore();
 
   useEffect(() => {
     document.documentElement.classList.toggle('dark', theme === 'dark');
@@ -47,12 +50,14 @@ export const App: React.FC = () => {
   useEffect(() => {
     if (isAuthenticated) {
       fetchPets();
+      // Refresh the stored user so settings/preferences are current
+      fetchMe();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isAuthenticated]);
 
   return (
-    <div className="min-h-screen flex flex-col bg-paw-cream dark:bg-paw-darkbg text-paw-dark dark:text-white transition-colors duration-200">
+    <div className="min-h-screen flex flex-col bg-paw-cream dark:bg-paw-darkbg print:bg-white text-paw-dark dark:text-white transition-colors duration-200">
       <ScrollToTop />
       <Navbar />
       <main className="flex-grow">
@@ -76,6 +81,9 @@ export const App: React.FC = () => {
               </ProtectedRoute>
             }
           />
+          <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
+          <Route path="/emergency" element={<ProtectedRoute><EmergencyMode /></ProtectedRoute>} />
+          <Route path="/pets/:petId/summary" element={<ProtectedRoute><HealthSummary /></ProtectedRoute>} />
           <Route path="/login" element={<Login />} />
           <Route path="/signup" element={<Signup />} />
           <Route path="*" element={<Home />} />

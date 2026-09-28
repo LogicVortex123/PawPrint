@@ -53,7 +53,7 @@ export const About: React.FC = () => {
                   <span>🐕 Multi-Pet Homes</span>
                 </div>
                 <div className="flex items-center gap-2 text-xs font-bold text-paw-forest dark:text-paw-light-sage bg-white dark:bg-paw-darkcard px-4 py-2 rounded-full border border-paw-soft-sage shadow-sm">
-                  <span>📶 Offline Reliability</span>
+                  <span>📄 Vet-Ready Records</span>
                 </div>
                 <div className="flex items-center gap-2 text-xs font-bold text-paw-forest dark:text-paw-light-sage bg-white dark:bg-paw-darkcard px-4 py-2 rounded-full border border-paw-soft-sage shadow-sm">
                   <span>🚨 1-Tap SOS Access</span>
@@ -120,7 +120,7 @@ export const About: React.FC = () => {
             <ul className="space-y-3 text-sm text-paw-secondary dark:text-emerald-200/80">
               <li className="flex items-start gap-2.5">
                 <span className="text-emerald-600 font-bold">✓</span>
-                <span>Offline-first architecture stores everything on your device first.</span>
+                <span>Every record in one place — profiles, vaccines, weight, visits and documents.</span>
               </li>
               <li className="flex items-start gap-2.5">
                 <span className="text-emerald-600 font-bold">✓</span>
@@ -134,7 +134,7 @@ export const About: React.FC = () => {
           </div>
         </div>
 
-        {/* Offline-First Philosophy Section */}
+        {/* Emergency-Ready Philosophy Section */}
         <div className="bg-paw-forest text-white rounded-[36px] p-8 sm:p-12 lg:p-16 relative overflow-hidden shadow-soft-xl">
           <div className="absolute -bottom-10 -right-10 opacity-20 pointer-events-none">
             <PawIcon className="w-56 h-56 text-paw-warm-sage" />
@@ -145,13 +145,13 @@ export const About: React.FC = () => {
               Core Engineering Philosophy
             </span>
             <h2 className="text-3xl sm:text-4xl font-extrabold tracking-tight">
-              Why We Insist on Offline-First
+              Why We Build for the Worst Day
             </h2>
             <p className="text-base sm:text-lg text-paw-soft-sage/90 leading-relaxed">
-              When an animal is unwell, stress is already high. You should never see a loading spinner or an “offline error” screen when an emergency vet asks for your dog’s vaccine history or allergy list.
+              When an animal is unwell, stress is already high. You should never be digging through papers or old messages when an emergency vet asks for your dog’s vaccine history or allergy list.
             </p>
             <p className="text-sm sm:text-base text-paw-soft-sage/80 leading-relaxed">
-              By caching full pet dossiers locally in high-speed SQLite, PawPrint gives you immediate access at all times. When internet connectivity returns, local changes synchronize silently in the background.
+              That’s why PawPrint puts allergies, medications, contacts and vaccine status one tap away in Emergency Mode, and lets you export a clean PDF health summary for any new vet, sitter or boarding facility.
             </p>
           </div>
         </div>

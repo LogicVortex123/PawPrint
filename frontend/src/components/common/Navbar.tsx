@@ -1,7 +1,8 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { Menu, X, LogOut, User } from 'lucide-react';
+import { Menu, X, LogOut, User, Search, Settings as SettingsIcon } from 'lucide-react';
 import { ThemeToggle } from './ThemeToggle';
+import { GlobalSearch } from './GlobalSearch';
 import { useAppStore } from '../../store/useAppStore';
 
 export const Navbar: React.FC = () => {
@@ -9,6 +10,17 @@ export const Navbar: React.FC = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const { isAuthenticated, user, logout, showToast } = useAppStore();
+  const [searchOpen, setSearchOpen] = useState(false);
+
+  // Ctrl/⌘+K opens search from anywhere once logged in
+  useEffect(() => {
+    if (!isAuthenticated) return;
+    const onKey = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') { e.preventDefault(); setSearchOpen(true); }
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [isAuthenticated]);
 
   const navLinks = [
     { label: 'Home', path: '/' },
@@ -31,7 +43,7 @@ export const Navbar: React.FC = () => {
   };
 
   return (
-    <header className="sticky top-0 z-50 bg-paw-cream/95 dark:bg-paw-darkbg/95 backdrop-blur-md transition-colors duration-200">
+    <header className="print:hidden sticky top-0 z-50 bg-paw-cream/95 dark:bg-paw-darkbg/95 backdrop-blur-md transition-colors duration-200">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-20">
 
@@ -70,17 +82,26 @@ export const Navbar: React.FC = () => {
 
           {/* Desktop right area */}
           <div className="hidden md:flex items-center gap-4">
+            {isAuthenticated && (
+              <button onClick={() => setSearchOpen(true)} aria-label="Search records" title="Search (Ctrl+K)"
+                className="flex items-center gap-2 pl-3 pr-2 py-2 rounded-full text-sm text-paw-secondary dark:text-paw-warm-sage bg-white dark:bg-paw-darksurface border border-paw-soft-sage/80 dark:border-paw-darkborder hover:border-paw-forest transition-colors">
+                <Search className="w-4 h-4" />
+                <kbd className="hidden lg:inline text-[10px] font-bold border border-paw-soft-sage dark:border-paw-darkborder rounded px-1.5 py-0.5">Ctrl K</kbd>
+              </button>
+            )}
             <ThemeToggle />
 
             {isAuthenticated && user ? (
               // Logged-in state: show user name + logout
               <div className="flex items-center gap-3">
-                <div className="flex items-center gap-2 px-4 py-2 rounded-full bg-paw-light-sage/60 dark:bg-paw-darksurface border border-paw-soft-sage/70 dark:border-paw-darkborder">
+                <Link to="/settings" title="Account settings"
+                  className="flex items-center gap-2 px-4 py-2 rounded-full bg-paw-light-sage/60 dark:bg-paw-darksurface border border-paw-soft-sage/70 dark:border-paw-darkborder hover:border-paw-forest transition-colors">
                   <User className="w-4 h-4 text-paw-forest dark:text-paw-sage" />
                   <span className="text-sm font-semibold text-paw-dark dark:text-white max-w-[120px] truncate">
                     {user.name.split(' ')[0]}
                   </span>
-                </div>
+                  <SettingsIcon className="w-3.5 h-3.5 text-paw-secondary" />
+                </Link>
                 <button
                   onClick={handleLogout}
                   className="flex items-center gap-1.5 px-4 py-2 text-sm font-medium text-paw-dark dark:text-white bg-white dark:bg-paw-darksurface border border-paw-soft-sage/80 dark:border-paw-darkborder rounded-full hover:bg-rose-50 hover:border-rose-200 hover:text-rose-600 dark:hover:bg-rose-950/30 dark:hover:border-rose-900 dark:hover:text-rose-300 transition-colors shadow-2xs"
@@ -110,6 +131,12 @@ export const Navbar: React.FC = () => {
 
           {/* Mobile menu button */}
           <div className="flex items-center gap-3 md:hidden">
+            {isAuthenticated && (
+              <button onClick={() => setSearchOpen(true)} aria-label="Search records"
+                className="p-2 rounded-full text-paw-forest dark:text-paw-warm-sage bg-paw-light-sage dark:bg-paw-darksurface border border-paw-soft-sage dark:border-paw-darkborder">
+                <Search className="w-4 h-4" />
+              </button>
+            )}
             <ThemeToggle />
             <button
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
@@ -147,10 +174,12 @@ export const Navbar: React.FC = () => {
           <div className="pt-4 border-t border-paw-soft-sage/30 dark:border-paw-darkborder/40 flex flex-col gap-2">
             {isAuthenticated && user ? (
               <>
-                <div className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-paw-light-sage/60 dark:bg-paw-darksurface border border-paw-soft-sage/50 dark:border-paw-darkborder">
+                <Link to="/settings" onClick={() => setMobileMenuOpen(false)}
+                  className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-paw-light-sage/60 dark:bg-paw-darksurface border border-paw-soft-sage/50 dark:border-paw-darkborder">
                   <User className="w-4 h-4 text-paw-forest dark:text-paw-sage" />
-                  <span className="text-sm font-semibold text-paw-dark dark:text-white">{user.name}</span>
-                </div>
+                  <span className="flex-1 text-sm font-semibold text-paw-dark dark:text-white">{user.name}</span>
+                  <span className="text-xs font-semibold text-paw-secondary">Settings</span>
+                </Link>
                 <button
                   onClick={handleLogout}
                   className="flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-medium text-rose-600 dark:text-rose-400 border border-rose-200 dark:border-rose-900/50 bg-rose-50 dark:bg-rose-950/20"
@@ -180,6 +209,7 @@ export const Navbar: React.FC = () => {
           </div>
         </div>
       )}
+      <GlobalSearch open={searchOpen} onClose={() => setSearchOpen(false)} />
     </header>
   );
 };

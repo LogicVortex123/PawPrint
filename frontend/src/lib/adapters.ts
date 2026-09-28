@@ -3,6 +3,7 @@
 // are the one place that translation happens, so components never have to guess at
 // backend field names.
 
+import { fileUrl } from './api';
 import { Pet, Vaccination, VaccinationStatus, WeightRecord, Appointment, MedicalDocument, Clinic } from '../types';
 
 // ── Pet ──────────────────────────────────────────────────────────────────────
@@ -53,7 +54,8 @@ export function mapBackendPet(bp: BackendPet): Pet {
     // weight and targetWeightRange are updated separately after fetching WeightRecords
     weight: 0,
     targetWeightRange: [0, 0],
-    photo: bp.photoUrl || (bp.species?.toLowerCase() === 'cat' ? '/cat.jpg' : '/dog.jpg'),
+    photo: fileUrl(bp.photoUrl) || (bp.species?.toLowerCase() === 'cat' ? '/cat.jpg' : '/dog.jpg'),
+    hasCustomPhoto: !!bp.photoUrl,
     allergies: bp.allergies?.filter(Boolean) ?? [],
     medications: bp.medications?.filter(Boolean) ?? [],
     microchipId: bp.microchipId || '',
@@ -108,7 +110,7 @@ type BackendWeightRecord = {
 function formatWeightDate(dateStr: string): string {
   const d = new Date(dateStr);
   if (Number.isNaN(d.getTime())) return 'Unknown';
-  return d.toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
+  return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
 }
 
 export function mapBackendWeightRecord(bw: BackendWeightRecord): WeightRecord {
@@ -116,7 +118,9 @@ export function mapBackendWeightRecord(bw: BackendWeightRecord): WeightRecord {
     id: bw._id,
     petId: bw.pet,
     date: formatWeightDate(bw.recordedAt || bw.createdAt),
+    recordedAt: bw.recordedAt || bw.createdAt,
     weight: bw.weightKg,
+    trendPercent: bw.trendPercent ?? null,
     note: undefined,
   };
 }
@@ -157,8 +161,10 @@ export function mapBackendAppointment(ba: BackendAppointment): Appointment {
     id: ba._id,
     petId: ba.pet,
     clinicName: ba.clinic?.name || 'Unknown clinic',
+    clinicAddress: ba.clinic?.address || '',
     date: formatAppointmentDate(ba.date),
     time: formatAppointmentTime(ba.date),
+    dateISO: ba.date,
     veterinarian: 'Vet',
     reason: ba.reason || 'General checkup',
     status: statusMap[ba.status] ?? 'upcoming',
@@ -185,8 +191,8 @@ export function mapBackendDocument(bd: BackendDocument): MedicalDocument {
     title: bd.originalName || 'Uploaded document',
     category: bd.category,
     date: formatAppointmentDate(bd.createdAt),
+    uploadedAt: bd.createdAt,
     fileSize: '',
-    syncedOffline: false,
     fileUrl: bd.fileUrl,
   };
 }

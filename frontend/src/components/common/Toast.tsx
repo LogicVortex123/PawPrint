@@ -11,7 +11,7 @@ import { X, CheckCircle2, AlertCircle, Info, AlertTriangle } from 'lucide-react'
 
 function resolveType(msg: string): 'success' | 'error' | 'warning' | 'info' {
   if (msg.startsWith('❌') || msg.toLowerCase().includes('failed') || msg.toLowerCase().includes('error')) return 'error';
-  if (msg.startsWith('⚠️') || msg.startsWith('🟠') || msg.toLowerCase().includes('offline') || msg.toLowerCase().includes('overdue')) return 'warning';
+  if (msg.startsWith('⚠️') || msg.startsWith('🟠') || msg.toLowerCase().includes('overdue')) return 'warning';
   if (msg.startsWith('ℹ️') || msg.startsWith('ℹ') || msg.startsWith('🔄')) return 'info';
   return 'success';
 }

@@ -1,9 +1,8 @@
 const router = require('express').Router();
 const requireAuth = require('../middleware/auth.middleware');
-const { update, remove } = require('../controllers/vaccination.controller');
+const { remove } = require('../controllers/document.controller');
 
-// Top-level per TRD Section 7: PUT /vaccinations/:id
-router.put('/:id', requireAuth, update);
+// Top-level like /vaccinations/:id — list/upload stay nested under /pets/:id/documents
 router.delete('/:id', requireAuth, remove);
 
 module.exports = router;
