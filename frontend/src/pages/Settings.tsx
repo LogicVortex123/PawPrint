@@ -4,6 +4,7 @@ import { User, Lock, Palette, Bell, AlertTriangle, Sun, Moon, Monitor } from 'lu
 import { useAppStore } from '../store/useAppStore';
 import { inputCls, labelCls, primaryBtnCls } from '../components/common/Modal';
 import { DEFAULT_PREFERENCES, ThemePreference, UserPreferences } from '../types';
+import { NotificationToggle } from '../components/common/NotificationToggle';
 
 const card = 'bg-[#FAFAF6] dark:bg-paw-darksurface rounded-3xl p-6 sm:p-8 border border-paw-soft-sage/70 dark:border-paw-darkborder shadow-soft';
 const heading = 'flex items-center gap-2 text-lg font-extrabold text-paw-dark dark:text-white mb-1';
@@ -169,6 +170,13 @@ export const Settings: React.FC = () => {
                 className="px-3 py-2 rounded-xl border border-paw-soft-sage dark:border-paw-darkborder bg-white dark:bg-paw-darksurface text-paw-dark dark:text-white text-sm">
                 {[3, 7, 14, 30, 60].map((d) => <option key={d} value={d}>{d} days</option>)}
               </select>
+            </div>
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-4 rounded-2xl bg-paw-cream dark:bg-paw-darkcard border border-paw-soft-sage/60 dark:border-paw-darkborder">
+              <div>
+                <div className="text-sm font-bold text-paw-dark dark:text-white">Browser alerts</div>
+                <div className="text-xs text-paw-secondary dark:text-paw-warm-sage">Get a notification when something is overdue or due in the next few days</div>
+              </div>
+              <NotificationToggle />
             </div>
           </div>
         </section>

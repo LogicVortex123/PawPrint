@@ -7,5 +7,6 @@ router.use('/weights', require('./weight.routes'));
 router.use('/documents', require('./document.routes'));
 router.use('/appointments', require('./appointment.routes'));
 router.use('/clinics', require('./clinic.routes'));
+router.use('/reminders', require('./reminder.routes'));
 
 module.exports = router;

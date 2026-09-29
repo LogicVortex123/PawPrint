@@ -3,13 +3,15 @@ import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { Menu, X, LogOut, User, Search, Settings as SettingsIcon } from 'lucide-react';
 import { ThemeToggle } from './ThemeToggle';
 import { GlobalSearch } from './GlobalSearch';
+import { ReminderBell } from './ReminderBell';
+import { notifyDueReminders } from '../../lib/reminderNotifications';
 import { useAppStore } from '../../store/useAppStore';
 
 export const Navbar: React.FC = () => {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const location = useLocation();
   const navigate = useNavigate();
-  const { isAuthenticated, user, logout, showToast } = useAppStore();
+  const { isAuthenticated, user, logout, showToast, reminders, fetchReminders } = useAppStore();
   const [searchOpen, setSearchOpen] = useState(false);
 
   // Ctrl/⌘+K opens search from anywhere once logged in
@@ -21,6 +23,21 @@ export const Navbar: React.FC = () => {
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
   }, [isAuthenticated]);
+
+  // Keep reminders fresh while the app is open — due dates move as days pass
+  useEffect(() => {
+    if (!isAuthenticated) return;
+    fetchReminders();
+    const timer = setInterval(fetchReminders, 30 * 60 * 1000);
+    const onVisible = () => { if (document.visibilityState === 'visible') fetchReminders(); };
+    document.addEventListener('visibilitychange', onVisible);
+    return () => { clearInterval(timer); document.removeEventListener('visibilitychange', onVisible); };
+  }, [isAuthenticated, fetchReminders]);
+
+  // Browser alert for newly urgent reminders (only if the user turned alerts on)
+  useEffect(() => {
+    if (isAuthenticated) notifyDueReminders(reminders, () => navigate('/features?tab=reminders'));
+  }, [isAuthenticated, reminders, navigate]);
 
   const navLinks = [
     { label: 'Home', path: '/' },
@@ -88,6 +105,7 @@ export const Navbar: React.FC = () => {
                 <Search className="w-4 h-4" />
               </button>
             )}
+            {isAuthenticated && <ReminderBell />}
             <ThemeToggle />
 
             {isAuthenticated && user ? (
@@ -136,6 +154,7 @@ export const Navbar: React.FC = () => {
                 <Search className="w-4 h-4" />
               </button>
             )}
+            {isAuthenticated && <ReminderBell />}
             <ThemeToggle />
             <button
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}

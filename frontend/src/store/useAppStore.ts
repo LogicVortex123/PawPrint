@@ -10,6 +10,7 @@ import {
   AuthUser,
   UserPreferences,
   ThemePreference,
+  Reminder,
 } from '../types';
 import { apiRequest, apiUpload } from '../lib/api';
 import { StorageKeys, readJson, readString, writeJson, writeString, clearAccountData } from '../lib/storage';
@@ -122,6 +123,11 @@ interface AppState {
 
   // Health Timeline — synthesized from real data
   timeline: HealthTimelineEntry[];
+
+  // Smart Reminders — computed by the backend (GET /reminders) for all pets
+  reminders: Reminder[];
+  remindersLoading: boolean;
+  fetchReminders: () => Promise<void>;
 
   // Clinics — real backend data (GET /clinics/nearby)
   clinics: Clinic[];
@@ -271,9 +277,19 @@ const cachedRecords = storedToken ? getCachedRecords(storedUser?.id) : null;
 
 export const useAppStore = create<AppState>((set, get) => {
   // Recompute the timeline after any record change
+  // Reminders depend on the same records, so refresh them too — debounced,
+  // since loading all pets' records fires several updates back to back
+  let remindersTimer: ReturnType<typeof setTimeout> | undefined;
+  const scheduleRemindersRefresh = () => {
+    clearTimeout(remindersTimer);
+    remindersTimer = setTimeout(() => { get().fetchReminders(); }, 300);
+  };
+
+  // Recompute the timeline (and reminders) after any record change
   const refreshTimeline = () => {
     const { vaccinations, weightRecords, appointments, documents } = get();
     set({ timeline: buildTimeline({ vaccinations, weightRecords, appointments, documents }) });
+    scheduleRemindersRefresh();
   };
 
   const requireToken = () => {
@@ -362,6 +378,7 @@ export const useAppStore = create<AppState>((set, get) => {
         appointments: [],
         documents: [],
         timeline: [],
+        reminders: [],
         selectedPetId: '',
       });
     },
@@ -386,6 +403,8 @@ export const useAppStore = create<AppState>((set, get) => {
       const user = await apiRequest<AuthUser>('/auth/me', { method: 'PUT', token, body: input });
       writeJson(StorageKeys.user, user);
       set({ user });
+      // Reminder types and lead time live in preferences
+      if (input.preferences) get().fetchReminders();
     },
 
     changePassword: async (currentPassword, newPassword) => {
@@ -456,6 +475,7 @@ export const useAppStore = create<AppState>((set, get) => {
             get().fetchDocumentsForPets(petIds),
           ]);
         }
+        scheduleRemindersRefresh();
       } catch (err: unknown) {
         const msg = err instanceof Error ? err.message : 'Could not load pets';
         set({ petsLoading: false, petsError: msg });
@@ -472,6 +492,7 @@ export const useAppStore = create<AppState>((set, get) => {
       });
       const pet = mapBackendPet(backendPet);
       set((state) => ({ pets: [...state.pets, pet], selectedPetId: pet.id }));
+      scheduleRemindersRefresh();
       get().showToast(`🐾 ${pet.name}'s profile is ready! Start logging vaccinations and checkups.`);
     },
 
@@ -750,6 +771,23 @@ export const useAppStore = create<AppState>((set, get) => {
 
     // ── Health Timeline (synthesized from real data) ──
     timeline: cachedRecords ? buildTimeline(cachedRecords) : [],
+
+    // ── Smart Reminders ──
+    reminders: [],
+    remindersLoading: false,
+
+    fetchReminders: async () => {
+      const { token } = get();
+      if (!token) return;
+      set({ remindersLoading: true });
+      try {
+        const data = await apiRequest<{ reminders: Reminder[] }>('/reminders', { token });
+        set({ reminders: data.reminders, remindersLoading: false });
+      } catch {
+        // Non-fatal: keep the last list rather than blanking the bell
+        set({ remindersLoading: false });
+      }
+    },
 
     // ── Clinics (real backend data) ──
     clinics: [],

@@ -1,5 +1,6 @@
 const jwt = require('jsonwebtoken');
 const { jwtSecret } = require('../config/env');
+const User = require('../models/User.model');
 const ApiError = require('../utils/ApiError');
 const asyncHandler = require('../utils/asyncHandler');
 
@@ -13,13 +14,21 @@ const requireAuth = asyncHandler(async (req, res, next) => {
     throw new ApiError(401, 'Authorization header is missing or malformed');
   }
 
+  let payload;
   try {
-    const payload = jwt.verify(token, jwtSecret);
-    req.userId = payload.sub;
-    next();
+    payload = jwt.verify(token, jwtSecret);
   } catch {
     throw new ApiError(401, 'Token is invalid or has expired');
   }
+
+  // A valid token can outlive its account (deleted in Settings) — treat that as
+  // signed out, so the client clears the session instead of getting 404s
+  if (!(await User.exists({ _id: payload.sub }))) {
+    throw new ApiError(401, 'This account no longer exists');
+  }
+
+  req.userId = payload.sub;
+  next();
 });
 
 module.exports = requireAuth;

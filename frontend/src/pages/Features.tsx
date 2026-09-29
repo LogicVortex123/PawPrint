@@ -36,7 +36,8 @@ import { fileUrl } from '../lib/api';
 import { downloadAppointmentIcs } from '../lib/calendar';
 import { useDraft } from '../lib/useDraft';
 import { StorageKeys, readJson, writeJson, removeKey } from '../lib/storage';
-import { DEFAULT_PREFERENCES, HealthTimelineEntry, Vaccination, WeightRecord, Appointment } from '../types';
+import { DEFAULT_PREFERENCES, HealthTimelineEntry, Vaccination, WeightRecord, Appointment, Reminder } from '../types';
+import { NotificationToggle } from '../components/common/NotificationToggle';
 
 export const DASHBOARD_TABS = ['pet-profiles', 'vaccinations', 'weight-tracking', 'vet-appointments', 'nearby-clinics', 'medical-documents', 'health-timeline', 'reminders'] as const;
 
@@ -77,6 +78,7 @@ export const Features: React.FC = () => {
     updateAppointment,
     user,
     showToast,
+    reminders: allReminders,
   } = useAppStore();
 
   // Active tab and pet live in the URL (?tab=...&pet=...) so sections can be
@@ -1083,65 +1085,25 @@ export const Features: React.FC = () => {
             </div>
           )}
 
-          {/* 8. Smart Reminders — computed live from this pet's real vaccinations,
-               appointments and weight history, not a static informational panel. */}
+          {/* 8. Smart Reminders — built by the backend (GET /reminders) from this
+               pet's real records and the user's reminder settings */}
           {activeTab === 'reminders' && (() => {
-            const daysUntil = (dateStr: string) => {
-              const target = new Date(dateStr);
-              if (Number.isNaN(target.getTime())) return null;
-              const now = new Date();
-              now.setHours(0, 0, 0, 0);
-              target.setHours(0, 0, 0, 0);
-              return Math.round((target.getTime() - now.getTime()) / 86400000);
-            };
-
-            type Reminder = {
-              id: string;
-              urgency: 'urgent' | 'upcoming' | 'info';
-              icon: React.ReactNode;
-              title: string;
-              subtitle: string;
-              when: string;
-            };
-
-            const reminders: Reminder[] = [];
-            // Which reminder types to show and how far ahead come from Account Settings
             const prefs = user?.preferences ?? DEFAULT_PREFERENCES;
             const leadDays = prefs.reminderLeadDays;
+            const reminders = allReminders.filter((r) => r.petId === pet.id);
 
-            for (const v of prefs.reminders.vaccination ? vaccinations.filter((v) => v.petId === pet.id) : []) {
-              const days = daysUntil(v.nextDueDate);
-              if (days === null) continue;
-              if (v.status === 'overdue') {
-                reminders.push({ id: `vax-${v.id}`, urgency: 'urgent', icon: <Syringe className="w-4 h-4" />, title: `${v.name} is overdue`, subtitle: `Was due ${v.nextDueDate} — book a vet visit soon.`, when: `${Math.abs(days)}d overdue` });
-              } else if (days <= leadDays) {
-                reminders.push({ id: `vax-${v.id}`, urgency: 'upcoming', icon: <Syringe className="w-4 h-4" />, title: `${v.name} due soon`, subtitle: `Next dose due ${v.nextDueDate} at ${v.clinic}.`, when: days === 0 ? 'Today' : `in ${days}d` });
-              }
-            }
-
-            for (const apt of prefs.reminders.appointment ? appointments.filter((a) => a.petId === pet.id && a.status === 'upcoming') : []) {
-              const days = daysUntil(apt.dateISO);
-              if (days === null || days < 0 || days > leadDays) continue;
-              reminders.push({
-                id: `apt-${apt.id}`,
-                urgency: days <= 2 ? 'urgent' : 'upcoming',
-                icon: <Calendar className="w-4 h-4" />,
-                title: apt.reason || 'Vet appointment',
-                subtitle: `${apt.clinicName}${apt.time ? ` · ${apt.time}` : ''}`,
-                when: days === 0 ? 'Today' : days === 1 ? 'Tomorrow' : `in ${days}d`,
-              });
-            }
-
-            if (prefs.reminders.weight) {
-              if (petWeights.length === 0) {
-                reminders.push({ id: 'weight-nudge', urgency: 'info', icon: <Scale className="w-4 h-4" />, title: 'No weight logged yet', subtitle: `Log ${pet.name}'s first weigh-in to start tracking body condition trends.`, when: 'Anytime' });
-              } else {
-                const sinceLast = daysUntil(latestWeight.recordedAt);
-                if (sinceLast !== null && sinceLast <= -30) {
-                  reminders.push({ id: 'weight-stale', urgency: 'info', icon: <Scale className="w-4 h-4" />, title: 'Time for a weigh-in', subtitle: `${pet.name}'s last weight was logged ${Math.abs(sinceLast)} days ago.`, when: 'This week' });
-                }
-              }
-            }
+            const TYPE_ICON: Record<Reminder['type'], React.ReactNode> = {
+              vaccination: <Syringe className="w-4 h-4" />,
+              appointment: <Calendar className="w-4 h-4" />,
+              weight: <Scale className="w-4 h-4" />,
+            };
+            const whenLabel = (r: Reminder) => {
+              if (r.daysUntil === null) return r.type === 'weight' ? 'This week' : '';
+              if (r.daysUntil < 0) return r.type === 'vaccination' ? `${Math.abs(r.daysUntil)}d overdue` : `${Math.abs(r.daysUntil)}d ago`;
+              if (r.daysUntil === 0) return 'Today';
+              if (r.daysUntil === 1) return 'Tomorrow';
+              return `in ${r.daysUntil}d`;
+            };
 
             const urgent = reminders.filter((r) => r.urgency === 'urgent');
             const upcoming = reminders.filter((r) => r.urgency === 'upcoming');
@@ -1155,13 +1117,13 @@ export const Features: React.FC = () => {
 
             const ReminderRow = ({ r }: { r: Reminder }) => (
               <div className={`flex items-start gap-3 p-4 rounded-2xl border ${urgencyStyles[r.urgency]}`}>
-                <div className="w-8 h-8 rounded-xl bg-white/70 dark:bg-black/20 flex items-center justify-center flex-shrink-0">{r.icon}</div>
+                <div className="w-8 h-8 rounded-xl bg-white/70 dark:bg-black/20 flex items-center justify-center flex-shrink-0">{TYPE_ICON[r.type]}</div>
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center justify-between gap-2">
                     <h4 className="text-sm font-bold text-paw-dark dark:text-white truncate">{r.title}</h4>
-                    <span className="text-[10px] font-extrabold uppercase tracking-wide whitespace-nowrap">{r.when}</span>
+                    <span className="text-[10px] font-extrabold uppercase tracking-wide whitespace-nowrap">{whenLabel(r)}</span>
                   </div>
-                  <p className="text-xs mt-0.5 opacity-90">{r.subtitle}</p>
+                  <p className="text-xs mt-0.5 opacity-90">{r.message}</p>
                 </div>
               </div>
             );
@@ -1169,10 +1131,10 @@ export const Features: React.FC = () => {
             return (
               <div className="space-y-8 animate-fadeIn">
                 <div className="pb-6 border-b border-paw-soft-sage/30 dark:border-paw-darkborder/50">
-                  <div className="inline-flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-paw-forest dark:text-paw-sage"><Bell className="w-4 h-4" /><span>Feature 08 · Smart Reminders</span></div>
+                  <div className="inline-flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-paw-forest dark:text-paw-sage"><Bell className="w-4 h-4" /><span>Smart Reminders</span></div>
                   <h2 className="text-3xl font-extrabold text-paw-dark dark:text-white">{pet.name}'s Care Feed</h2>
                   <p className="text-paw-secondary dark:text-paw-warm-sage/80 text-sm pt-1">
-                    Live, computed from {pet.name}'s actual records. Showing the next {leadDays} days —{' '}
+                    What needs doing for {pet.name} in the next {leadDays} days —{' '}
                     <Link to="/settings" className="font-semibold text-paw-forest dark:text-paw-sage hover:underline">change reminder settings</Link>.
                   </p>
                 </div>
@@ -1184,7 +1146,7 @@ export const Features: React.FC = () => {
                       <div className="text-center py-14 rounded-3xl bg-emerald-50 dark:bg-emerald-950/20 border border-emerald-200 dark:border-emerald-900/40">
                         <CheckCircle2 className="w-10 h-10 mx-auto mb-3 text-emerald-600 dark:text-emerald-400" />
                         <p className="font-bold text-emerald-800 dark:text-emerald-300">{pet.name} is all caught up!</p>
-                        <p className="text-xs text-emerald-700 dark:text-emerald-400 mt-1">No overdue vaccinations or upcoming appointments right now.</p>
+                        <p className="text-xs text-emerald-700 dark:text-emerald-400 mt-1">Nothing is overdue or coming up in the next {leadDays} days.</p>
                       </div>
                     ) : (
                       <>
@@ -1233,8 +1195,9 @@ export const Features: React.FC = () => {
                     <div className="bg-paw-light-sage/50 dark:bg-paw-darkcard/50 rounded-3xl p-6 border border-paw-soft-sage/60 dark:border-paw-darkborder space-y-3">
                       <h3 className="text-xs font-extrabold uppercase tracking-wider text-paw-forest dark:text-paw-sage">How Reminders Reach You</h3>
                       <p className="text-xs text-paw-secondary dark:text-paw-warm-sage leading-relaxed">
-                        On the PawPrint mobile app, this exact feed is delivered as push notifications via Expo Notifications. On web, it's live right here — refresh anytime, or just check back before {pet.name}'s next visit.
+                        The bell at the top shows reminders for all your pets. Turn on browser alerts to get a notification when a vaccine or visit is due.
                       </p>
+                      <NotificationToggle />
                     </div>
                   </div>
                 </div>

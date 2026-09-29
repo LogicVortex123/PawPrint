@@ -97,6 +97,19 @@ export interface HealthTimelineEntry {
   statusColor?: string;
 }
 
+// Smart Reminders item, as returned by GET /reminders
+export interface Reminder {
+  id: string;
+  type: 'vaccination' | 'appointment' | 'weight';
+  urgency: 'urgent' | 'upcoming' | 'info';
+  petId: string;
+  petName: string;
+  title: string;
+  message: string;
+  dueDate: string | null;
+  daysUntil: number | null;
+}
+
 export interface UserPreferences {
   reminders: { vaccination: boolean; appointment: boolean; weight: boolean };
   reminderLeadDays: number;
