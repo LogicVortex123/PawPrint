@@ -134,7 +134,6 @@ export const Settings: React.FC = () => {
         {/* Appearance */}
         <section className={card}>
           <h2 className={heading}><Palette className="w-5 h-5" /> Appearance</h2>
-          <p className={sub}>Saved in this browser.</p>
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
             {themeOptions.map((opt) => (
               <button key={opt.value} onClick={() => setThemePreference(opt.value)}

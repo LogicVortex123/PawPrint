@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { useNavigate } from 'react-router-dom';
-import { Search, PawPrint, Syringe, Calendar, FileText, CornerDownLeft, History, X } from 'lucide-react';
+import { Search, PawPrint, Syringe, Calendar, FileText, History, X } from 'lucide-react';
 import { useAppStore } from '../../store/useAppStore';
 import { StorageKeys, readJson, writeJson, removeKey } from '../../lib/storage';
 
@@ -33,7 +34,8 @@ function rememberSearch(query: string) {
 }
 
 // Searches every pet's records at once. Opening a result jumps to the right
-// pet and dashboard tab. Opens with Ctrl/⌘+K from anywhere once logged in.
+// pet and dashboard tab. Rendered into <body> so the backdrop covers the whole
+// page — inside the blurred navbar a fixed overlay would only cover the navbar.
 export const GlobalSearch: React.FC<{ open: boolean; onClose: () => void }> = ({ open, onClose }) => {
   const { pets, vaccinations, appointments, documents } = useAppStore();
   const navigate = useNavigate();
@@ -77,6 +79,14 @@ export const GlobalSearch: React.FC<{ open: boolean; onClose: () => void }> = ({
 
   useEffect(() => { setActive(0); }, [query]);
 
+  // Escape closes it even when focus has left the input
+  useEffect(() => {
+    if (!open) return;
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
+    document.addEventListener('keydown', onKey);
+    return () => document.removeEventListener('keydown', onKey);
+  }, [open, onClose]);
+
   if (!open) return null;
 
   const openResult = (r: Result) => {
@@ -86,13 +96,12 @@ export const GlobalSearch: React.FC<{ open: boolean; onClose: () => void }> = ({
   };
 
   const onKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === 'Escape') onClose();
-    else if (e.key === 'ArrowDown') { e.preventDefault(); setActive((i) => Math.min(i + 1, results.length - 1)); }
+    if (e.key === 'ArrowDown') { e.preventDefault(); setActive((i) => Math.min(i + 1, results.length - 1)); }
     else if (e.key === 'ArrowUp') { e.preventDefault(); setActive((i) => Math.max(i - 1, 0)); }
     else if (e.key === 'Enter' && results[active]) openResult(results[active]);
   };
 
-  return (
+  return createPortal(
     <div className="fixed inset-0 z-[60] flex items-start justify-center p-4 pt-[12vh] bg-black/40 backdrop-blur-sm" onClick={onClose}>
       <div role="dialog" aria-modal="true" aria-label="Search"
         className="w-full max-w-xl bg-[#FAFAF6] dark:bg-paw-darksurface rounded-3xl border border-paw-soft-sage/70 dark:border-paw-darkborder shadow-soft-xl overflow-hidden"
@@ -102,7 +111,10 @@ export const GlobalSearch: React.FC<{ open: boolean; onClose: () => void }> = ({
           <input ref={inputRef} value={query} onChange={(e) => setQuery(e.target.value)} onKeyDown={onKeyDown}
             placeholder="Search pets, vaccines, appointments, documents…"
             className="flex-1 bg-transparent text-paw-dark dark:text-white placeholder:text-paw-secondary/70 focus:outline-none text-base" />
-          <kbd className="hidden sm:inline text-[10px] font-bold text-paw-secondary border border-paw-soft-sage dark:border-paw-darkborder rounded px-1.5 py-0.5">ESC</kbd>
+          <button onClick={onClose} aria-label="Close search"
+            className="p-1.5 rounded-full text-paw-secondary hover:text-paw-forest hover:bg-paw-light-sage dark:text-paw-warm-sage dark:hover:bg-paw-darkcard">
+            <X className="w-4 h-4" />
+          </button>
         </div>
 
         <div className="max-h-[55vh] overflow-y-auto p-2">
@@ -128,9 +140,7 @@ export const GlobalSearch: React.FC<{ open: boolean; onClose: () => void }> = ({
                   </div>
                 ))}
               </div>
-            ) : (
-              <p className="px-4 py-6 text-sm text-center text-paw-secondary dark:text-paw-warm-sage">Try a pet name, “rabies”, a clinic, or “overdue”.</p>
-            )
+            ) : null
           ) : results.length === 0 ? (
             <p className="px-4 py-6 text-sm text-center text-paw-secondary dark:text-paw-warm-sage">No matches for “{query}”.</p>
           ) : results.map((r, i) => {
@@ -145,13 +155,13 @@ export const GlobalSearch: React.FC<{ open: boolean; onClose: () => void }> = ({
                     <span className="block text-sm font-bold text-paw-dark dark:text-white truncate">{r.title}</span>
                     <span className="block text-xs text-paw-secondary dark:text-paw-warm-sage truncate">{r.subtitle}</span>
                   </span>
-                  {i === active && <CornerDownLeft className="w-4 h-4 text-paw-secondary" />}
                 </button>
               </React.Fragment>
             );
           })}
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 };

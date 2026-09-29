@@ -5,7 +5,7 @@ import { PawIcon } from '../common/OrganicDeco';
 export const TrustSection: React.FC = () => {
   const items = [
     { title: 'Pet Safety & Privacy', subtitle: 'Your data stays yours.', icon: Leaf },
-    { title: 'JWT + Bcrypt Secured', subtitle: 'Modern, encrypted authentication.', icon: Shield },
+    { title: 'Secure Sign-In', subtitle: 'Your account is protected.', icon: Shield },
     { title: 'iOS & Android', subtitle: 'One account, every device.', icon: Smartphone },
     { title: 'Built to Last', subtitle: 'Fast, reliable, always improving.', icon: Cloud },
   ];

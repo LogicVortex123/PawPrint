@@ -51,7 +51,7 @@ function loadScript(): Promise<void> {
 // One Tap / account chooser flow, or rejects if it's cancelled/blocked.
 export async function requestGoogleIdToken(): Promise<string> {
   if (!CLIENT_ID) {
-    throw new Error('Google Sign-In is not configured (missing VITE_GOOGLE_CLIENT_ID)');
+    throw new Error("Google Sign-In isn't available right now. Please use your email instead.");
   }
 
   await loadScript();
@@ -63,14 +63,14 @@ export async function requestGoogleIdToken(): Promise<string> {
         if (response.credential) {
           resolve(response.credential);
         } else {
-          reject(new Error('Google Sign-In did not return a credential'));
+          reject(new Error("Google Sign-In didn't finish. Please try again."));
         }
       },
     });
 
     window.google!.accounts.id.prompt((notification) => {
       if (notification.isNotDisplayed?.() || notification.isSkippedMoment?.()) {
-        reject(new Error('Google Sign-In was cancelled or blocked by the browser'));
+        reject(new Error('Google Sign-In was cancelled. Please try again.'));
       }
     });
   });

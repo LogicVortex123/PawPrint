@@ -83,10 +83,9 @@ export const Navbar: React.FC = () => {
           {/* Desktop right area */}
           <div className="hidden md:flex items-center gap-4">
             {isAuthenticated && (
-              <button onClick={() => setSearchOpen(true)} aria-label="Search records" title="Search (Ctrl+K)"
-                className="flex items-center gap-2 pl-3 pr-2 py-2 rounded-full text-sm text-paw-secondary dark:text-paw-warm-sage bg-white dark:bg-paw-darksurface border border-paw-soft-sage/80 dark:border-paw-darkborder hover:border-paw-forest transition-colors">
+              <button onClick={() => setSearchOpen(true)} aria-label="Search records" title="Search"
+                className="flex items-center gap-2 p-2 rounded-full text-sm text-paw-secondary dark:text-paw-warm-sage bg-white dark:bg-paw-darksurface border border-paw-soft-sage/80 dark:border-paw-darkborder hover:border-paw-forest transition-colors">
                 <Search className="w-4 h-4" />
-                <kbd className="hidden lg:inline text-[10px] font-bold border border-paw-soft-sage dark:border-paw-darkborder rounded px-1.5 py-0.5">Ctrl K</kbd>
               </button>
             )}
             <ThemeToggle />
