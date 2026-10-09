@@ -6,17 +6,25 @@ const RETRY_DELAY_MS = 2000;
 
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
-async function connectOnce() {
-  await mongoose.connect(mongoUri, {
-    // These keep Atlas TLS happy on Windows/Node.js — tlsAllowInvalidCertificates
-    // is only permitted in dev since we don't want to bypass cert checks in prod.
-    tls: true,
-    tlsAllowInvalidCertificates: nodeEnv !== 'production',
+// Atlas (mongodb+srv://) always uses TLS; a local mongod usually doesn't, so
+// TLS options are only applied when the connection string calls for them.
+function connectionOptions(uri) {
+  const usesTls = uri.startsWith('mongodb+srv://') || /[?&](tls|ssl)=true/i.test(uri);
+  return {
     serverSelectionTimeoutMS: 10000,
     // Atlas + Node's TLS stack occasionally flakes on IPv6 handshakes on Windows
     // ("SSL alert number 80" / tlsv1 alert internal error) — IPv4 is more stable.
     family: 4,
-  });
+    ...(usesTls && {
+      tls: true,
+      // Only allowed in dev — certificate checks are never bypassed in production
+      tlsAllowInvalidCertificates: nodeEnv !== 'production',
+    }),
+  };
+}
+
+async function connectOnce(uri) {
+  await mongoose.connect(uri, connectionOptions(uri));
 
   // mongoose.connect() only confirms topology discovery — the actual query
   // connections in the pool are opened lazily on first use, and that first
@@ -26,12 +34,12 @@ async function connectOnce() {
   await mongoose.connection.db.admin().ping();
 }
 
-async function connectDB() {
+async function connectDB(uri = mongoUri) {
   mongoose.set('strictQuery', true);
 
   for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt += 1) {
     try {
-      await connectOnce();
+      await connectOnce(uri);
       console.log('MongoDB connected');
       return;
     } catch (err) {
@@ -47,4 +55,9 @@ async function connectDB() {
   }
 }
 
+async function disconnectDB() {
+  await mongoose.disconnect();
+}
+
 module.exports = connectDB;
+module.exports.disconnectDB = disconnectDB;

@@ -7,10 +7,13 @@ import {
   Activity,
   BarChart3,
   Award,
+  Wallet,
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { useAppStore } from '../store/useAppStore';
 import { PawIcon } from '../components/common/OrganicDeco';
+import { formatMoney } from '../lib/money';
+import { todayKey } from '../lib/dates';
 
 export const Analytics: React.FC = () => {
   const {
@@ -23,6 +26,8 @@ export const Analytics: React.FC = () => {
     weightRecords,
     appointments,
     timeline,
+    expenses,
+    user,
   } = useAppStore();
 
   const [activeRange, setActiveRange] = useState<'6m' | '1y' | 'all'>('6m');
@@ -325,6 +330,38 @@ export const Analytics: React.FC = () => {
           </div>
 
         </div>
+
+        {/* Spending — from the expense tracker */}
+        {(() => {
+          const year = todayKey().slice(0, 4);
+          const month = todayKey().slice(0, 7);
+          const petExpenses = expenses.filter((e) => e.petId === pet.id);
+          const yearTotal = petExpenses.filter((e) => e.date.startsWith(year)).reduce((s, e) => s + e.amount, 0);
+          const monthTotal = petExpenses.filter((e) => e.date.startsWith(month)).reduce((s, e) => s + e.amount, 0);
+          const currency = user?.preferences?.currency;
+          return (
+            <div className="bg-white dark:bg-paw-darksurface rounded-[32px] p-6 sm:p-8 border border-paw-soft-sage/60 dark:border-paw-darkborder shadow-soft flex flex-col sm:flex-row sm:items-center justify-between gap-6">
+              <div className="flex items-center gap-3">
+                <Wallet className="w-5 h-5 text-paw-forest dark:text-paw-sage" />
+                <div>
+                  <h3 className="text-xl font-bold text-paw-dark dark:text-white">Spending on {pet.name}</h3>
+                  <p className="text-xs text-paw-secondary dark:text-paw-warm-sage">{petExpenses.length ? 'From the expense tracker' : 'Log vet bills, food and grooming to see what care costs.'}</p>
+                </div>
+              </div>
+              <div className="flex items-center gap-8">
+                <div>
+                  <div className="text-[11px] font-bold uppercase tracking-wider text-paw-secondary dark:text-paw-warm-sage">This month</div>
+                  <div className="text-2xl font-extrabold text-paw-dark dark:text-white">{formatMoney(monthTotal, currency)}</div>
+                </div>
+                <div>
+                  <div className="text-[11px] font-bold uppercase tracking-wider text-paw-secondary dark:text-paw-warm-sage">{year} so far</div>
+                  <div className="text-2xl font-extrabold text-paw-dark dark:text-white">{formatMoney(yearTotal, currency)}</div>
+                </div>
+                <Link to={`/features?pet=${pet.id}&tab=expenses`} className="text-sm font-bold text-paw-forest dark:text-paw-sage hover:underline whitespace-nowrap">View expenses →</Link>
+              </div>
+            </div>
+          );
+        })()}
 
         {/* Recent Activity Timeline */}
         <div className="bg-white dark:bg-paw-darksurface rounded-[32px] p-6 sm:p-8 border border-paw-soft-sage/60 dark:border-paw-darkborder shadow-soft">

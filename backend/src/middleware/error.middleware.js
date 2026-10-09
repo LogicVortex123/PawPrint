@@ -11,6 +11,10 @@ function toClientError(err) {
     return new ApiError(400, first?.message || 'Some fields are invalid');
   }
   if (err.name === 'CastError') return new ApiError(400, `Invalid value for ${err.path}`);
+  if (err.type === 'entity.parse.failed') return new ApiError(400, 'Request body is not valid JSON');
+  if (err.type === 'entity.too.large') return new ApiError(413, 'Request body is too large');
+  if (err.code === 11000) return new ApiError(409, 'That record already exists');
+  if (/^Origin .* not allowed$/.test(err.message || '')) return new ApiError(403, 'This website is not allowed to use the PawPrint API');
   return err;
 }
 

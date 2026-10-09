@@ -1,0 +1,2 @@
+# Netlify: every path serves the single-page app, so /settings or /share/... work on refresh
+/*    /index.html   200

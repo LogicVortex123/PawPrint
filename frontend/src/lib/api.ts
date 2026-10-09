@@ -69,6 +69,25 @@ export async function apiUpload<T>(path: string, formData: FormData, token: stri
   return handleResponse<T>(res, true);
 }
 
+// Downloads a file from an authenticated endpoint (CSV, JSON export) — a plain
+// link can't send the Authorization header, so fetch it and save the blob
+export async function apiDownload(path: string, token: string, fallbackName: string): Promise<void> {
+  const res = await fetch(`${API_BASE_URL}${path}`, { headers: { Authorization: `Bearer ${token}` } });
+  if (!res.ok) {
+    const data = await res.json().catch(() => undefined);
+    throw new Error(data?.error?.message || 'Download failed');
+  }
+  const name = res.headers.get('Content-Disposition')?.match(/filename="([^"]+)"/)?.[1] || fallbackName;
+  const url = URL.createObjectURL(await res.blob());
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = name;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+
 // Turns a stored "/uploads/..." path into a full URL; leaves absolute and local paths alone
 export function fileUrl(path?: string): string | undefined {
   if (!path) return undefined;

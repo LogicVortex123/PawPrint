@@ -1,13 +1,15 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useNavigate } from 'react-router-dom';
-import { Search, PawPrint, Syringe, Calendar, FileText, History, X } from 'lucide-react';
+import { Search, PawPrint, Syringe, Calendar, FileText, History, X, Pill, Wallet } from 'lucide-react';
 import { useAppStore } from '../../store/useAppStore';
 import { StorageKeys, readJson, writeJson, removeKey } from '../../lib/storage';
+import { categoryInfo, formatMoney } from '../../lib/money';
+import { formatDateKey } from '../../lib/dates';
 
 type Result = {
   id: string;
-  kind: 'pet' | 'vaccination' | 'appointment' | 'document';
+  kind: 'pet' | 'vaccination' | 'medication' | 'appointment' | 'expense' | 'document';
   title: string;
   subtitle: string;
   petId: string;
@@ -17,7 +19,9 @@ type Result = {
 const KIND_META: Record<Result['kind'], { label: string; icon: React.ReactNode }> = {
   pet: { label: 'Pets', icon: <PawPrint className="w-4 h-4" /> },
   vaccination: { label: 'Vaccinations', icon: <Syringe className="w-4 h-4" /> },
+  medication: { label: 'Medications', icon: <Pill className="w-4 h-4" /> },
   appointment: { label: 'Appointments', icon: <Calendar className="w-4 h-4" /> },
+  expense: { label: 'Expenses', icon: <Wallet className="w-4 h-4" /> },
   document: { label: 'Documents', icon: <FileText className="w-4 h-4" /> },
 };
 
@@ -37,7 +41,7 @@ function rememberSearch(query: string) {
 // pet and dashboard tab. Rendered into <body> so the backdrop covers the whole
 // page — inside the blurred navbar a fixed overlay would only cover the navbar.
 export const GlobalSearch: React.FC<{ open: boolean; onClose: () => void }> = ({ open, onClose }) => {
-  const { pets, vaccinations, appointments, documents } = useAppStore();
+  const { pets, vaccinations, appointments, documents, medications, expenses, user } = useAppStore();
   const navigate = useNavigate();
   const [query, setQuery] = useState('');
   const [active, setActive] = useState(0);
@@ -70,12 +74,20 @@ export const GlobalSearch: React.FC<{ open: boolean; onClose: () => void }> = ({
       .filter((a) => matches(a.reason, a.clinicName, a.clinicAddress, a.notes, a.status))
       .map((a) => ({ id: `apt-${a.id}`, kind: 'appointment', title: a.reason, subtitle: `${petName(a.petId)} · ${a.clinicName} · ${a.date}`, petId: a.petId, tab: 'vet-appointments' }));
 
+    const medResults: Result[] = medications
+      .filter((m) => matches(m.name, m.dosage, m.instructions, m.prescribedBy))
+      .map((m) => ({ id: `med-${m.id}`, kind: 'medication', title: m.name, subtitle: `${petName(m.petId)} · ${m.schedule.frequencyLabel}${m.schedule.active ? '' : ' · finished'}`, petId: m.petId, tab: 'medications' }));
+
+    const expenseResults: Result[] = expenses
+      .filter((e) => matches(e.description, e.vendor, categoryInfo(e.category).label))
+      .map((e) => ({ id: `exp-${e.id}`, kind: 'expense', title: e.description || categoryInfo(e.category).label, subtitle: `${petName(e.petId)} · ${formatMoney(e.amount, user?.preferences?.currency)} · ${formatDateKey(e.date)}`, petId: e.petId, tab: 'expenses' }));
+
     const docResults: Result[] = documents
       .filter((d) => matches(d.title, d.category))
       .map((d) => ({ id: `doc-${d.id}`, kind: 'document', title: d.title, subtitle: `${petName(d.petId)} · ${d.category} · ${d.date}`, petId: d.petId, tab: 'medical-documents' }));
 
-    return [petResults, vaxResults, aptResults, docResults].flatMap((group) => group.slice(0, MAX_PER_KIND));
-  }, [query, pets, vaccinations, appointments, documents]);
+    return [petResults, vaxResults, medResults, aptResults, expenseResults, docResults].flatMap((group) => group.slice(0, MAX_PER_KIND));
+  }, [query, pets, vaccinations, appointments, documents, medications, expenses, user?.preferences?.currency]);
 
   useEffect(() => { setActive(0); }, [query]);
 
@@ -109,7 +121,7 @@ export const GlobalSearch: React.FC<{ open: boolean; onClose: () => void }> = ({
         <div className="flex items-center gap-3 px-5 py-4 border-b border-paw-soft-sage/50 dark:border-paw-darkborder">
           <Search className="w-5 h-5 text-paw-secondary" />
           <input ref={inputRef} value={query} onChange={(e) => setQuery(e.target.value)} onKeyDown={onKeyDown}
-            placeholder="Search pets, vaccines, appointments, documents…"
+            placeholder="Search pets, vaccines, medications, visits, expenses…"
             className="flex-1 bg-transparent text-paw-dark dark:text-white placeholder:text-paw-secondary/70 focus:outline-none text-base" />
           <button onClick={onClose} aria-label="Close search"
             className="p-1.5 rounded-full text-paw-secondary hover:text-paw-forest hover:bg-paw-light-sage dark:text-paw-warm-sage dark:hover:bg-paw-darkcard">

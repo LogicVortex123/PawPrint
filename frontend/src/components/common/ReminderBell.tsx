@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Bell, Syringe, Calendar, Scale } from 'lucide-react';
+import { Bell, Syringe, Calendar, Scale, Pill } from 'lucide-react';
 import { useAppStore } from '../../store/useAppStore';
 import { Reminder } from '../../types';
 import { NotificationToggle } from './NotificationToggle';
@@ -9,6 +9,7 @@ const TYPE_ICON: Record<Reminder['type'], React.ReactNode> = {
   vaccination: <Syringe className="w-4 h-4" />,
   appointment: <Calendar className="w-4 h-4" />,
   weight: <Scale className="w-4 h-4" />,
+  medication: <Pill className="w-4 h-4" />,
 };
 
 const DOT: Record<Reminder['urgency'], string> = {
@@ -38,9 +39,9 @@ export const ReminderBell: React.FC<{ className?: string }> = ({ className = '' 
     return () => { document.removeEventListener('mousedown', onPointer); document.removeEventListener('keydown', onKey); };
   }, [open]);
 
-  const openReminders = (petId?: string) => {
+  const openReminders = (petId?: string, tab = 'reminders') => {
     setOpen(false);
-    navigate(`/features?${petId ? `pet=${petId}&` : ''}tab=reminders`);
+    navigate(`/features?${petId ? `pet=${petId}&` : ''}tab=${tab}`);
   };
 
   return (
@@ -65,7 +66,7 @@ export const ReminderBell: React.FC<{ className?: string }> = ({ className = '' 
             {reminders.length === 0 ? (
               <p className="px-3 py-6 text-sm text-center text-paw-secondary dark:text-paw-warm-sage">You're all caught up.</p>
             ) : reminders.slice(0, MAX_SHOWN).map((r) => (
-              <button key={r.id} onClick={() => openReminders(r.petId)}
+              <button key={r.id} onClick={() => openReminders(r.petId, r.type === 'medication' ? 'medications' : 'reminders')}
                 className="w-full flex items-start gap-3 px-3 py-2.5 rounded-xl text-left hover:bg-paw-light-sage dark:hover:bg-paw-darkcard transition-colors">
                 <span className="relative w-8 h-8 rounded-lg bg-white dark:bg-paw-darkbg text-paw-forest dark:text-paw-sage flex items-center justify-center flex-shrink-0">
                   {TYPE_ICON[r.type]}

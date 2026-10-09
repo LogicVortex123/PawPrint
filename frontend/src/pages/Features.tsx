@@ -27,6 +27,9 @@ import {
   FileDown,
   TrendingUp,
   TrendingDown,
+  Pill,
+  Share2,
+  Wallet,
 } from 'lucide-react';
 import { useAppStore } from '../store/useAppStore';
 import { PawIcon } from '../components/common/OrganicDeco';
@@ -38,8 +41,16 @@ import { useDraft } from '../lib/useDraft';
 import { StorageKeys, readJson, writeJson, removeKey } from '../lib/storage';
 import { DEFAULT_PREFERENCES, HealthTimelineEntry, Vaccination, WeightRecord, Appointment, Reminder } from '../types';
 import { NotificationToggle } from '../components/common/NotificationToggle';
+import { MedicationsTab } from '../components/dashboard/MedicationsTab';
+import { ShareDialog } from '../components/dashboard/ShareDialog';
+import { currentMedicationLabels, weightTargetStatus } from '../lib/adapters';
+import { ExpensesTab, ExpenseFormModal, ExpensePrefill } from '../components/dashboard/ExpensesTab';
+import { apiRequest } from '../lib/api';
+import { addMonthsToKey, isoToDateKey } from '../lib/dates';
+import { formatMoney } from '../lib/money';
+import { VaccineSuggestion } from '../types';
 
-export const DASHBOARD_TABS = ['pet-profiles', 'vaccinations', 'weight-tracking', 'vet-appointments', 'nearby-clinics', 'medical-documents', 'health-timeline', 'reminders'] as const;
+export const DASHBOARD_TABS = ['pet-profiles', 'vaccinations', 'medications', 'weight-tracking', 'vet-appointments', 'expenses', 'nearby-clinics', 'medical-documents', 'health-timeline', 'reminders'] as const;
 
 const TIMELINE_FILTERS: { key: 'all' | HealthTimelineEntry['category']; label: string }[] = [
   { key: 'all', label: 'All' },
@@ -79,6 +90,9 @@ export const Features: React.FC = () => {
     user,
     showToast,
     reminders: allReminders,
+    medications,
+    expenses,
+    token,
   } = useAppStore();
 
   // Active tab and pet live in the URL (?tab=...&pet=...) so sections can be
@@ -100,6 +114,10 @@ export const Features: React.FC = () => {
   };
 
   const [timelineFilter, setTimelineFilter] = useState<'all' | HealthTimelineEntry['category']>('all');
+  const [sharing, setSharing] = useState(false);
+  // "Log cost" on a completed appointment opens the expense form pre-filled
+  const [costFor, setCostFor] = useState<ExpensePrefill | null>(null);
+  const [vaccineCatalog, setVaccineCatalog] = useState<{ species: string; vaccines: VaccineSuggestion[]; disclaimer: string } | null>(null);
   const [editingVax, setEditingVax] = useState<Vaccination | null>(null);
   const [editingWeight, setEditingWeight] = useState<WeightRecord | null>(null);
   const [editingApt, setEditingApt] = useState<Appointment | null>(null);
@@ -136,6 +154,21 @@ export const Features: React.FC = () => {
   const [showVaxForm, setShowVaxForm] = useState(vaxDraft.hasDraft);
   const [savingVax, setSavingVax] = useState(false);
 
+  // Vaccine suggestions for this species — fetched once the add form is opened
+  const vaxSpecies = selectedPet()?.species || 'other';
+  useEffect(() => {
+    if (!showVaxForm || vaccineCatalog?.species === vaxSpecies) return;
+    apiRequest<{ species: string; vaccines: VaccineSuggestion[]; disclaimer: string }>(`/vaccinations/catalog?species=${vaxSpecies}`, { token })
+      .then(setVaccineCatalog)
+      .catch(() => {});
+  }, [showVaxForm, vaxSpecies, vaccineCatalog?.species, token]);
+  const vaxSuggestion = vaccineCatalog?.vaccines.find((v) => v.name.toLowerCase() === vaxName.trim().toLowerCase());
+  // Picking a known vaccine (or changing the given date) pre-fills the usual next due date
+  const suggestNextDue = (name: string, adminDate: string) => {
+    const match = vaccineCatalog?.vaccines.find((v) => v.name.toLowerCase() === name.trim().toLowerCase());
+    if (match && adminDate) vaxDraft.update({ nextDue: addMonthsToKey(adminDate, match.intervalMonths) });
+  };
+
   // Book appointment form
   const aptDraft = useDraft(`appointment-${draftPetId}`, { clinic: '', date: '', reason: '', notes: '' });
   const { clinic: aptClinic, date: aptDate, reason: aptReason, notes: aptNotes } = aptDraft.value;
@@ -162,6 +195,8 @@ export const Features: React.FC = () => {
   const [editMedications, setEditMedications] = useState('');
   const [editContactName, setEditContactName] = useState('');
   const [editContactPhone, setEditContactPhone] = useState('');
+  const [editTargetMin, setEditTargetMin] = useState('');
+  const [editTargetMax, setEditTargetMax] = useState('');
   const [editMicrochipId, setEditMicrochipId] = useState('');
   const [savingPet, setSavingPet] = useState(false);
   const [deletingPet, setDeletingPet] = useState(false);
@@ -195,11 +230,11 @@ export const Features: React.FC = () => {
     const draft: EditPetDraft = {
       name: editName, species: editSpecies, breed: editBreed, gender: editGender, dob: editDob,
       allergies: editAllergies, medications: editMedications, contactName: editContactName,
-      contactPhone: editContactPhone, microchipId: editMicrochipId,
+      contactPhone: editContactPhone, microchipId: editMicrochipId, targetMin: editTargetMin, targetMax: editTargetMax,
     };
     writeJson(editDraftKey(editingPet.id), draft);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [showEditPet, editName, editSpecies, editBreed, editGender, editDob, editAllergies, editMedications, editContactName, editContactPhone, editMicrochipId]);
+  }, [showEditPet, editName, editSpecies, editBreed, editGender, editDob, editAllergies, editMedications, editContactName, editContactPhone, editMicrochipId, editTargetMin, editTargetMax]);
 
   // Escape closes the edit-profile modal, like the other dialogs
   useEffect(() => {
@@ -340,6 +375,7 @@ export const Features: React.FC = () => {
   type EditPetDraft = {
     name: string; species: 'dog' | 'cat' | 'other'; breed: string; gender: 'male' | 'female'; dob: string;
     allergies: string; medications: string; contactName: string; contactPhone: string; microchipId: string;
+    targetMin?: string; targetMax?: string;
   };
   const editDraftKey = (petId: string) => `${StorageKeys.draftPrefix}edit-pet-${petId}`;
 
@@ -357,6 +393,8 @@ export const Features: React.FC = () => {
       contactName: pet.emergencyContact.name,
       contactPhone: pet.emergencyContact.phone,
       microchipId: pet.microchipId,
+      targetMin: pet.targetWeightMinKg != null ? String(pet.targetWeightMinKg) : '',
+      targetMax: pet.targetWeightMaxKg != null ? String(pet.targetWeightMaxKg) : '',
     };
     setEditName(fields.name);
     setEditSpecies(fields.species);
@@ -368,6 +406,8 @@ export const Features: React.FC = () => {
     setEditContactName(fields.contactName);
     setEditContactPhone(fields.contactPhone);
     setEditMicrochipId(fields.microchipId);
+    setEditTargetMin(fields.targetMin ?? '');
+    setEditTargetMax(fields.targetMax ?? '');
     setShowEditPet(true);
     if (draft) showToast(`📝 Restored your unsaved changes to ${pet.name}'s profile.`);
   };
@@ -382,6 +422,10 @@ export const Features: React.FC = () => {
     e.preventDefault();
     if (!pet) return;
     if (!editName.trim()) { showToast('⚠️ Pet name cannot be empty.'); return; }
+    const targetMin = editTargetMin.trim() ? Number(editTargetMin) : null;
+    const targetMax = editTargetMax.trim() ? Number(editTargetMax) : null;
+    if ((targetMin !== null && !(targetMin > 0)) || (targetMax !== null && !(targetMax > 0))) { showToast('⚠️ Target weights must be positive numbers.'); return; }
+    if (targetMin !== null && targetMax !== null && targetMin > targetMax) { showToast('⚠️ The target minimum is larger than the maximum.'); return; }
     setSavingPet(true);
     try {
       await updatePet(pet.id, {
@@ -396,6 +440,8 @@ export const Features: React.FC = () => {
         emergencyContacts: editContactName.trim()
           ? [{ name: editContactName.trim(), phone: editContactPhone.trim() }]
           : [],
+        targetWeightMinKg: targetMin,
+        targetWeightMaxKg: targetMax,
       });
       closeEditPet();
     } catch (err) {
@@ -467,12 +513,15 @@ export const Features: React.FC = () => {
   const petTimeline = timeline.filter((t) => t.petId === pet.id);
   const filteredTimeline = timelineFilter === 'all' ? petTimeline : petTimeline.filter((t) => t.category === timelineFilter);
   const latestWeight = petWeights[petWeights.length - 1];
+  const petMedicationLabels = currentMedicationLabels(pet, medications);
 
   const featureTabs = [
     { id: 'pet-profiles', label: 'Pet Profiles', icon: PawPrint },
     { id: 'vaccinations', label: 'Vaccinations', icon: Syringe },
+    { id: 'medications', label: 'Medications', icon: Pill },
     { id: 'weight-tracking', label: 'Weight Tracking', icon: Scale },
     { id: 'vet-appointments', label: 'Appointments', icon: Calendar },
+    { id: 'expenses', label: 'Expenses', icon: Wallet },
     { id: 'nearby-clinics', label: 'Nearby Clinics', icon: MapPin },
     { id: 'medical-documents', label: 'Medical Vault', icon: FileText },
     { id: 'health-timeline', label: 'Timeline', icon: Clock },
@@ -520,11 +569,15 @@ export const Features: React.FC = () => {
               className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full text-sm font-bold bg-white dark:bg-paw-darksurface text-paw-forest dark:text-paw-warm-sage border border-paw-soft-sage dark:border-paw-darkborder hover:bg-paw-light-sage/40 transition-colors">
               <FileDown className="w-4 h-4" /><span>Export Health Summary (PDF)</span>
             </Link>
+            <button onClick={() => setSharing(true)}
+              className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full text-sm font-bold bg-white dark:bg-paw-darksurface text-paw-forest dark:text-paw-warm-sage border border-paw-soft-sage dark:border-paw-darkborder hover:bg-paw-light-sage/40 transition-colors">
+              <Share2 className="w-4 h-4" /><span>Share with Vet</span>
+            </button>
           </div>
         </div>
 
         {/* Feature Navigation Pills */}
-        <div className="flex items-center justify-start lg:justify-center overflow-x-auto pb-4 mb-10 gap-2 scrollbar-none">
+        <div className="flex items-center justify-start lg:justify-center lg:flex-wrap overflow-x-auto lg:overflow-visible pb-4 mb-10 gap-2 scrollbar-none">
           {featureTabs.map((tab) => {
             const Icon = tab.icon;
             const active = activeTab === tab.id;
@@ -598,9 +651,12 @@ export const Features: React.FC = () => {
                     <div className="bg-emerald-50 dark:bg-emerald-950/20 rounded-2xl p-5 border border-emerald-200/60 dark:border-emerald-900/40">
                       <div className="flex items-center gap-2 text-emerald-800 dark:text-emerald-300 font-bold text-sm mb-2"><Shield className="w-4 h-4" /><span>Active Medications</span></div>
                       <ul className="space-y-1 text-xs text-emerald-900 dark:text-emerald-200">
-                        {pet.medications.length === 0 && <li className="opacity-70">No active medications recorded</li>}
-                        {pet.medications.map((m, i) => (<li key={i} className="flex items-center gap-1.5 font-medium"><span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />{m}</li>))}
+                        {petMedicationLabels.length === 0 && <li className="opacity-70">No active medications recorded</li>}
+                        {petMedicationLabels.map((m, i) => (<li key={i} className="flex items-center gap-1.5 font-medium"><span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />{m}</li>))}
                       </ul>
+                      <button onClick={() => setActiveTab('medications')} className="mt-3 text-[11px] font-bold text-emerald-800 dark:text-emerald-300 hover:underline">
+                        Track doses &amp; reminders →
+                      </button>
                     </div>
                   </div>
                   <div className="bg-paw-light-sage/60 dark:bg-paw-darkcard/50 rounded-2xl p-5 border border-paw-soft-sage/60 dark:border-paw-darkborder space-y-3">
@@ -658,12 +714,22 @@ export const Features: React.FC = () => {
                     <button onClick={() => setShowVaxForm(false)} className="text-paw-secondary hover:text-paw-dark"><X className="w-4 h-4" /></button>
                   </div>
                   <form onSubmit={handleAddVaccination} className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-                    <input required value={vaxName} onChange={(e) => setVaxName(e.target.value)} placeholder="Vaccine name *" className={inputCls} />
-                    <input required type="date" value={vaxAdminDate} onChange={(e) => setVaxAdminDate(e.target.value)} placeholder="Administered date *" className={inputCls} />
+                    <input required value={vaxName} list="vaccine-suggestions" aria-label="Vaccine name"
+                      onChange={(e) => { setVaxName(e.target.value); suggestNextDue(e.target.value, vaxAdminDate); }} placeholder="Vaccine name * (start typing)" className={inputCls} />
+                    <datalist id="vaccine-suggestions">
+                      {vaccineCatalog?.vaccines.map((v) => <option key={v.name} value={v.name}>{v.core ? 'Core vaccine' : 'Lifestyle vaccine'}</option>)}
+                    </datalist>
+                    <input required type="date" value={vaxAdminDate} aria-label="Date given"
+                      onChange={(e) => { setVaxAdminDate(e.target.value); suggestNextDue(vaxName, e.target.value); }} placeholder="Administered date *" className={inputCls} />
                     <input required type="date" value={vaxNextDue} onChange={(e) => setVaxNextDue(e.target.value)} placeholder="Next due date *" className={inputCls} />
                     <input value={vaxVet} onChange={(e) => setVaxVet(e.target.value)} placeholder="Veterinarian (optional)" className={inputCls} />
                     <input value={vaxClinic} onChange={(e) => setVaxClinic(e.target.value)} placeholder="Clinic (optional)" className={inputCls} />
                     <input value={vaxBatch} onChange={(e) => setVaxBatch(e.target.value)} placeholder="Batch number (optional)" className={inputCls} />
+                    {vaxSuggestion && (
+                      <p className="sm:col-span-2 lg:col-span-3 text-xs text-paw-secondary dark:text-paw-warm-sage -mt-1">
+                        💡 <strong>{vaxSuggestion.core ? 'Core vaccine.' : 'Lifestyle vaccine.'}</strong> {vaxSuggestion.description} Next due was set to the usual {vaxSuggestion.intervalMonths} months — {vaccineCatalog?.disclaimer.toLowerCase()}
+                      </p>
+                    )}
                     <div className="sm:col-span-2 lg:col-span-3">
                       <button type="submit" disabled={savingVax}
                         className="px-6 py-2.5 rounded-full text-sm font-bold text-white bg-paw-forest hover:bg-paw-deep shadow-soft disabled:opacity-60 transition-all">
@@ -717,6 +783,9 @@ export const Features: React.FC = () => {
             </div>
           )}
 
+          {activeTab === 'medications' && <MedicationsTab pet={pet} />}
+          {activeTab === 'expenses' && <ExpensesTab pet={pet} />}
+
           {/* 3. Weight Tracking */}
           {activeTab === 'weight-tracking' && (
             <div className="space-y-8 animate-fadeIn">
@@ -725,6 +794,20 @@ export const Features: React.FC = () => {
                   <div className="inline-flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-paw-forest dark:text-paw-sage"><Scale className="w-4 h-4" /><span>Feature 03 · Weight Tracking</span></div>
                   <h2 className="text-3xl font-extrabold text-paw-dark dark:text-white">Historical Growth &amp; Body Condition</h2>
                   {pet.weight > 0 && <p className="text-paw-secondary dark:text-paw-warm-sage/80 text-sm pt-1">Current weight: <span className="font-bold text-paw-forest dark:text-paw-sage">{pet.weight} kg</span></p>}
+                  {(() => {
+                    const target = weightTargetStatus(pet.weight, pet.targetWeightMinKg, pet.targetWeightMaxKg);
+                    const range = `${pet.targetWeightMinKg ?? '–'}–${pet.targetWeightMaxKg ?? '–'} kg`;
+                    if (!target) {
+                      return (pet.targetWeightMinKg == null && pet.targetWeightMaxKg == null) ? (
+                        <button onClick={openEditPet} className="text-xs font-semibold text-paw-forest dark:text-paw-sage hover:underline pt-1">+ Set a healthy weight range</button>
+                      ) : <p className="text-xs pt-1 text-paw-secondary dark:text-paw-warm-sage">Target range: {range}</p>;
+                    }
+                    return (
+                      <p className={`text-xs pt-1 font-bold ${target.status === 'within' ? 'text-emerald-700 dark:text-emerald-400' : 'text-amber-700 dark:text-amber-400'}`}>
+                        {target.status === 'within' ? `✓ Within the target range (${range})` : `${target.status === 'above' ? '▲' : '▼'} ${target.percent}% ${target.status} the target range (${range})`}
+                      </p>
+                    );
+                  })()}
                   {latestWeight && latestWeight.trendPercent !== null && (
                     <p className="text-xs pt-1 inline-flex items-center gap-1.5 text-paw-secondary dark:text-paw-warm-sage/80">
                       {latestWeight.trendPercent >= 0 ? <TrendingUp className="w-3.5 h-3.5" /> : <TrendingDown className="w-3.5 h-3.5" />}
@@ -763,9 +846,13 @@ export const Features: React.FC = () => {
                         <text x="12" y="24" fill="#6F9F89" fontSize="10" fontWeight="bold">Weight History</text>
                         {petWeights.length >= 2 && (() => {
                           const weights = petWeights.map(w => w.weight);
-                          const min = Math.min(...weights) - 1;
-                          const max = Math.max(...weights) + 1;
+                          const targets = [pet.targetWeightMinKg, pet.targetWeightMaxKg].filter((t): t is number => t != null);
+                          const min = Math.min(...weights, ...targets) - 1;
+                          const max = Math.max(...weights, ...targets) + 1;
                           const range = max - min || 1;
+                          const yFor = (kg: number) => 130 - ((kg - min) / range) * 100;
+                          const bandTop = pet.targetWeightMaxKg != null ? yFor(pet.targetWeightMaxKg) : 30;
+                          const bandBottom = pet.targetWeightMinKg != null ? yFor(pet.targetWeightMinKg) : 130;
                           const pts = petWeights.map((w, i) => {
                             const x = 40 + (i / Math.max(petWeights.length - 1, 1)) * 520;
                             const y = 130 - ((w.weight - min) / range) * 100;
@@ -774,6 +861,12 @@ export const Features: React.FC = () => {
                           const d = `M ${pts[0]} ` + pts.slice(1).map(p => `L ${p}`).join(' ');
                           return (
                             <>
+                              {targets.length > 0 && (
+                                <g>
+                                  <rect x="30" y={bandTop} width="540" height={Math.max(bandBottom - bandTop, 1)} fill="#6F9F89" fillOpacity="0.18" />
+                                  <text x="36" y={bandTop + 12} textAnchor="start" fill="#526461" fontSize="10" fontWeight="bold">Healthy range</text>
+                                </g>
+                              )}
                               <path d={d} fill="none" stroke="#245C4A" strokeWidth="3.5" strokeLinecap="round" strokeLinejoin="round" />
                               {petWeights.map((w, i) => {
                                 const x = 40 + (i / Math.max(petWeights.length - 1, 1)) * 520;
@@ -883,6 +976,17 @@ export const Features: React.FC = () => {
                             className="flex-1 px-3 py-1.5 rounded-full font-bold text-rose-700 dark:text-rose-400 border border-rose-200 dark:border-rose-900/40 hover:bg-rose-50 dark:hover:bg-rose-950/30 transition-colors">Cancel</button>
                         </div>
                       )}
+                      {apt.status === 'completed' && (() => {
+                        const logged = expenses.filter((e) => e.appointmentId === apt.id);
+                        return logged.length ? (
+                          <div className="text-emerald-700 dark:text-emerald-400 font-bold">💸 Cost logged: {formatMoney(logged.reduce((sum, e) => sum + e.amount, 0), user?.preferences?.currency)}</div>
+                        ) : (
+                          <button onClick={() => setCostFor({ category: 'vet', description: apt.reason, vendor: apt.clinicName, date: isoToDateKey(apt.dateISO), appointment: apt.id })}
+                            className="w-full px-3 py-1.5 rounded-full font-bold border border-paw-soft-sage dark:border-paw-darkborder text-paw-dark dark:text-white hover:border-paw-forest">
+                            + Log the cost of this visit
+                          </button>
+                        );
+                      })()}
                       <div className="flex items-center justify-between">
                         {apt.status === 'upcoming' ? (
                           <button onClick={() => downloadAppointmentIcs(apt, pet.name)} className="text-paw-forest dark:text-paw-warm-sage font-bold hover:underline">Add to Calendar</button>
@@ -1096,6 +1200,7 @@ export const Features: React.FC = () => {
               vaccination: <Syringe className="w-4 h-4" />,
               appointment: <Calendar className="w-4 h-4" />,
               weight: <Scale className="w-4 h-4" />,
+              medication: <Pill className="w-4 h-4" />,
             };
             const whenLabel = (r: Reminder) => {
               if (r.daysUntil === null) return r.type === 'weight' ? 'This week' : '';
@@ -1211,6 +1316,8 @@ export const Features: React.FC = () => {
       {editingVax && <EditVaccinationModal vaccination={editingVax} onClose={() => setEditingVax(null)} />}
       {editingWeight && <EditWeightModal record={editingWeight} onClose={() => setEditingWeight(null)} />}
       {editingApt && <EditAppointmentModal appointment={editingApt} onClose={() => setEditingApt(null)} />}
+      {sharing && <ShareDialog pet={pet} onClose={() => setSharing(false)} />}
+      {costFor && <ExpenseFormModal pet={pet} prefill={costFor} onClose={() => setCostFor(null)} />}
 
       {/* Edit Pet Profile Modal */}
       {showEditPet && (
@@ -1265,8 +1372,9 @@ export const Features: React.FC = () => {
               </div>
 
               <div>
-                <label className="block text-xs font-bold uppercase tracking-wider text-paw-secondary dark:text-paw-warm-sage mb-1.5">Medications (comma-separated)</label>
+                <label className="block text-xs font-bold uppercase tracking-wider text-paw-secondary dark:text-paw-warm-sage mb-1.5">Other medications (comma-separated)</label>
                 <input value={editMedications} onChange={(e) => setEditMedications(e.target.value)} placeholder="e.g. Heartgard Plus (Monthly)" className={inputCls} />
+                <p className="text-[11px] text-paw-secondary dark:text-paw-warm-sage mt-1">For dose reminders and a daily checklist, add it in the Medications tab instead.</p>
               </div>
 
               <div className="grid grid-cols-2 gap-3">
@@ -1283,6 +1391,15 @@ export const Features: React.FC = () => {
               <div>
                 <label className="block text-xs font-bold uppercase tracking-wider text-paw-secondary dark:text-paw-warm-sage mb-1.5">Microchip ID</label>
                 <input value={editMicrochipId} onChange={(e) => setEditMicrochipId(e.target.value)} className={inputCls} />
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold uppercase tracking-wider text-paw-secondary dark:text-paw-warm-sage mb-1.5">Healthy weight range (kg)</label>
+                <div className="grid grid-cols-2 gap-3">
+                  <input type="number" min="0" step="0.1" value={editTargetMin} onChange={(e) => setEditTargetMin(e.target.value)} placeholder="Min, e.g. 25" aria-label="Target weight minimum" className={inputCls} />
+                  <input type="number" min="0" step="0.1" value={editTargetMax} onChange={(e) => setEditTargetMax(e.target.value)} placeholder="Max, e.g. 30" aria-label="Target weight maximum" className={inputCls} />
+                </div>
+                <p className="text-[11px] text-paw-secondary dark:text-paw-warm-sage mt-1">Ask your vet for {pet.name}&apos;s ideal range. It shows on the weight chart, and you get a reminder if a weigh-in falls outside it.</p>
               </div>
 
               <div className="flex items-center justify-between pt-2 gap-3">

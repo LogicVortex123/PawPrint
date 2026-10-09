@@ -137,13 +137,9 @@ export const Login: React.FC = () => {
                 <label className="block text-xs font-bold uppercase tracking-wider text-paw-dark dark:text-white">
                   Password
                 </label>
-                <button
-                  type="button"
-                  onClick={() => showToast('Password reset is not yet available — contact support')}
-                  className="text-xs font-semibold text-paw-forest dark:text-paw-warm-sage hover:underline"
-                >
+                <Link to="/forgot-password" className="text-xs font-semibold text-paw-forest dark:text-paw-warm-sage hover:underline">
                   Forgot password?
-                </button>
+                </Link>
               </div>
               <div className="relative">
                 <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-paw-secondary">

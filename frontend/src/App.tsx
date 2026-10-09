@@ -1,19 +1,37 @@
-import React, { useEffect } from 'react';
+import React, { Suspense, lazy, useEffect } from 'react';
 import { Routes, Route, Navigate, useLocation } from 'react-router-dom';
+import { Loader2 } from 'lucide-react';
 import { Navbar } from './components/common/Navbar';
 import { Footer } from './components/common/Footer';
 import { Toast } from './components/common/Toast';
+import { ErrorBoundary } from './components/common/ErrorBoundary';
 import { Home } from './pages/Home';
-import { Features } from './pages/Features';
-import { About } from './pages/About';
-import { Roadmap } from './pages/Roadmap';
-import { Analytics } from './pages/Analytics';
-import { Login } from './pages/Login';
-import { Signup } from './pages/Signup';
-import { Settings } from './pages/Settings';
-import { EmergencyMode } from './pages/EmergencyMode';
-import { HealthSummary } from './pages/HealthSummary';
 import { useAppStore } from './store/useAppStore';
+
+// Every page except the landing page is loaded on demand, so the first visit
+// downloads only what it shows (pages export named components)
+const page = <K extends string>(load: () => Promise<Record<K, React.ComponentType>>, name: K) =>
+  lazy(() => load().then((m) => ({ default: m[name] })));
+
+const Features = page(() => import('./pages/Features'), 'Features');
+const About = page(() => import('./pages/About'), 'About');
+const Roadmap = page(() => import('./pages/Roadmap'), 'Roadmap');
+const Analytics = page(() => import('./pages/Analytics'), 'Analytics');
+const Login = page(() => import('./pages/Login'), 'Login');
+const Signup = page(() => import('./pages/Signup'), 'Signup');
+const Settings = page(() => import('./pages/Settings'), 'Settings');
+const EmergencyMode = page(() => import('./pages/EmergencyMode'), 'EmergencyMode');
+const HealthSummary = page(() => import('./pages/HealthSummary'), 'HealthSummary');
+const ForgotPassword = page(() => import('./pages/ForgotPassword'), 'ForgotPassword');
+const ResetPassword = page(() => import('./pages/ResetPassword'), 'ResetPassword');
+const SharedRecord = page(() => import('./pages/SharedRecord'), 'SharedRecord');
+const NotFound = page(() => import('./pages/NotFound'), 'NotFound');
+
+const PageLoader = () => (
+  <div className="py-32 flex justify-center text-paw-secondary dark:text-paw-warm-sage" role="status" aria-label="Loading page">
+    <Loader2 className="w-7 h-7 animate-spin" />
+  </div>
+);
 
 function ScrollToTop() {
   const { pathname } = useLocation();
@@ -39,6 +57,7 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
 
 export const App: React.FC = () => {
   const { theme, isAuthenticated, fetchPets, fetchMe } = useAppStore();
+  const { pathname } = useLocation();
 
   useEffect(() => {
     document.documentElement.classList.toggle('dark', theme === 'dark');
@@ -61,6 +80,8 @@ export const App: React.FC = () => {
       <ScrollToTop />
       <Navbar />
       <main className="flex-grow">
+        <ErrorBoundary resetKey={pathname}>
+        <Suspense fallback={<PageLoader />}>
         <Routes>
           <Route path="/" element={<Home />} />
           <Route
@@ -86,8 +107,14 @@ export const App: React.FC = () => {
           <Route path="/pets/:petId/summary" element={<ProtectedRoute><HealthSummary /></ProtectedRoute>} />
           <Route path="/login" element={<Login />} />
           <Route path="/signup" element={<Signup />} />
-          <Route path="*" element={<Home />} />
+          <Route path="/forgot-password" element={<ForgotPassword />} />
+          <Route path="/reset-password" element={<ResetPassword />} />
+          {/* Public, read-only record a vet/sitter opens from a shared link */}
+          <Route path="/share/:token" element={<SharedRecord />} />
+          <Route path="*" element={<NotFound />} />
         </Routes>
+        </Suspense>
+        </ErrorBoundary>
       </main>
       <Footer />
       <Toast />

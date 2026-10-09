@@ -13,6 +13,7 @@ const documentSchema = new mongoose.Schema(
     fileUrl: { type: String, required: true },
     originalName: { type: String },
     mimeType: { type: String },
+    sizeBytes: { type: Number },
     clientLocalId: { type: String, index: true, sparse: true },
   },
   { timestamps: true }

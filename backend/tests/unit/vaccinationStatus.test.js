@@ -1,4 +1,4 @@
-const { deriveVaccinationStatus } = require('../src/services/vaccinationStatus.service');
+const { deriveVaccinationStatus } = require('../../src/services/vaccinationStatus.service');
 
 describe('deriveVaccinationStatus', () => {
   const now = new Date('2026-01-01T00:00:00Z');

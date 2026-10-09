@@ -1,4 +1,4 @@
-const { haversineDistanceKm, rankByDistance } = require('../src/services/clinicDistance.service');
+const { haversineDistanceKm, rankByDistance } = require('../../src/services/clinicDistance.service');
 
 describe('haversineDistanceKm', () => {
   test('distance from a point to itself is 0', () => {

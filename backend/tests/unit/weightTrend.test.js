@@ -1,4 +1,4 @@
-const { withTrend } = require('../src/services/weightTrend.service');
+const { withTrend } = require('../../src/services/weightTrend.service');
 
 describe('withTrend', () => {
   test('first entry has no trend', () => {

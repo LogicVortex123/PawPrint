@@ -5,7 +5,12 @@ const mongoose = require('mongoose');
 const weightRecordSchema = new mongoose.Schema(
   {
     pet: { type: mongoose.Schema.Types.ObjectId, ref: 'Pet', required: true, index: true },
-    weightKg: { type: Number, required: true, min: 0 },
+    weightKg: {
+      type: Number,
+      required: [true, 'Weight is required'],
+      min: [0.01, 'Weight must be more than 0 kg'],
+      max: [500, 'Weight must be 500 kg or less'],
+    },
     recordedAt: { type: Date, required: true, default: Date.now },
     clientLocalId: { type: String, index: true, sparse: true },
   },

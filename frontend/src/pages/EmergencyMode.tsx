@@ -3,12 +3,13 @@ import { Link, useSearchParams } from 'react-router-dom';
 import { ArrowLeft, AlertTriangle, Pill, Phone, Cpu, Syringe, MapPin, Loader2, Navigation } from 'lucide-react';
 import { useAppStore } from '../store/useAppStore';
 import { Vaccination } from '../types';
+import { currentMedicationLabels } from '../lib/adapters';
 
 // One-screen, minimal-tap view of what a vet or helper needs in an emergency:
 // allergies and medications first, then contacts, microchip, vaccines, and the
 // nearest 24/7 clinic. Large type and high contrast on purpose.
 export const EmergencyMode: React.FC = () => {
-  const { pets, petsLoading, vaccinations, clinics, clinicsLoading, fetchClinics } = useAppStore();
+  const { pets, petsLoading, vaccinations, medications, clinics, clinicsLoading, fetchClinics } = useAppStore();
   const [searchParams, setSearchParams] = useSearchParams();
   const pet = pets.find((p) => p.id === searchParams.get('pet')) || pets[0];
   const [locating, setLocating] = useState(false);
@@ -99,8 +100,8 @@ export const EmergencyMode: React.FC = () => {
           </section>
           <section className="bg-white dark:bg-black/30 rounded-3xl p-5 border border-rose-200 dark:border-rose-900">
             <h2 className="flex items-center gap-2 text-lg font-extrabold uppercase tracking-wide text-gray-900 dark:text-white"><Pill className="w-5 h-5" /> Medications</h2>
-            {pet.medications.length ? (
-              <ul className="mt-2 space-y-1 text-lg font-bold text-gray-900 dark:text-white">{pet.medications.map((m) => <li key={m}>• {m}</li>)}</ul>
+            {currentMedicationLabels(pet, medications).length ? (
+              <ul className="mt-2 space-y-1 text-lg font-bold text-gray-900 dark:text-white">{currentMedicationLabels(pet, medications).map((m) => <li key={m}>• {m}</li>)}</ul>
             ) : <p className="mt-2 text-base font-semibold text-gray-600 dark:text-gray-400">None recorded</p>}
           </section>
         </div>

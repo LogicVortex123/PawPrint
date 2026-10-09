@@ -3,10 +3,22 @@ const Vaccination = require('../models/Vaccination.model');
 const WeightRecord = require('../models/WeightRecord.model');
 const Document = require('../models/Document.model');
 const Appointment = require('../models/Appointment.model');
+const Medication = require('../models/Medication.model');
+const MedicationDose = require('../models/MedicationDose.model');
+const ShareLink = require('../models/ShareLink.model');
+const Expense = require('../models/Expense.model');
 const asyncHandler = require('../utils/asyncHandler');
 const ApiError = require('../utils/ApiError');
 const { findOwnedPetOrFail } = require('../services/petAccess.service');
 const { removeUploadedFile } = require('../services/uploadFiles.service');
+const { pick, requireString } = require('../utils/validate');
+
+// Everything an owner may set on a pet. owner and photoUrl are deliberately
+// absent: ownership never changes, and photos go through POST /pets/:id/photo.
+const PET_FIELDS = [
+  'name', 'species', 'breed', 'gender', 'dateOfBirth', 'microchipId',
+  'allergies', 'medications', 'emergencyContacts', 'targetWeightMinKg', 'targetWeightMaxKg',
+];
 
 // GET /pets
 const listPets = asyncHandler(async (req, res) => {
@@ -23,35 +35,53 @@ const getPet = asyncHandler(async (req, res) => {
 // POST /pets
 // clientLocalId lets the mobile sync queue retry a push safely without creating duplicates
 const createPet = asyncHandler(async (req, res) => {
-  const { clientLocalId } = req.body;
+  const clientLocalId = typeof req.body.clientLocalId === 'string' ? req.body.clientLocalId : undefined;
 
   if (clientLocalId) {
     const existing = await Pet.findOne({ owner: req.userId, clientLocalId });
     if (existing) return res.status(200).json(existing);
   }
 
-  const pet = await Pet.create({ ...req.body, owner: req.userId });
+  const fields = pick(req.body, PET_FIELDS);
+  fields.name = requireString(fields.name, 'Pet name', { max: 60 });
+  fields.species = requireString(fields.species ?? 'other', 'Species', { max: 30 });
+
+  const pet = await Pet.create({ ...fields, clientLocalId, owner: req.userId });
   res.status(201).json(pet);
 });
 
 // PUT /pets/:id
 const updatePet = asyncHandler(async (req, res) => {
-  await findOwnedPetOrFail(req.params.id, req.userId);
-  // owner and photoUrl can't be changed through a plain update — photos go
-  // through POST /pets/:id/photo so the old file gets cleaned up
-  const { owner, photoUrl, ...changes } = req.body;
-  const pet = await Pet.findByIdAndUpdate(req.params.id, changes, { new: true, runValidators: true });
+  const pet = await findOwnedPetOrFail(req.params.id, req.userId);
+  const changes = pick(req.body, PET_FIELDS);
+  if (changes.name !== undefined) changes.name = requireString(changes.name, 'Pet name', { max: 60 });
+
+  // Clearing a target weight sends null — unset it rather than storing null
+  for (const key of ['targetWeightMinKg', 'targetWeightMaxKg']) {
+    if (req.body[key] === null || req.body[key] === '') {
+      pet[key] = undefined;
+      delete changes[key];
+    }
+  }
+
+  // Assign + save (instead of findByIdAndUpdate) so the schema's cross-field
+  // checks, like min <= max target weight, run on every edit
+  Object.assign(pet, changes);
+  await pet.save();
   res.json(pet);
 });
 
 // POST /pets/:id/photo — multipart/form-data with a single "photo" image
 const uploadPhoto = asyncHandler(async (req, res) => {
-  const pet = await findOwnedPetOrFail(req.params.id, req.userId);
-
   if (!req.file) throw new ApiError(400, 'A photo is required');
-  if (!req.file.mimetype.startsWith('image/')) {
+  // multer has already saved the file — throw it away if this request isn't allowed
+  let pet;
+  try {
+    pet = await findOwnedPetOrFail(req.params.id, req.userId);
+    if (!req.file.mimetype.startsWith('image/')) throw new ApiError(400, 'Pet photos must be an image (JPG, PNG or WebP)');
+  } catch (err) {
     await removeUploadedFile(`/uploads/${req.file.filename}`);
-    throw new ApiError(400, 'Pet photos must be an image (JPG, PNG or WebP)');
+    throw err;
   }
 
   const previous = pet.photoUrl;
@@ -72,6 +102,10 @@ const deletePet = asyncHandler(async (req, res) => {
     WeightRecord.deleteMany({ pet: pet._id }),
     Appointment.deleteMany({ pet: pet._id }),
     Document.deleteMany({ pet: pet._id }),
+    Medication.deleteMany({ pet: pet._id }),
+    MedicationDose.deleteMany({ pet: pet._id }),
+    ShareLink.deleteMany({ pet: pet._id }),
+    Expense.deleteMany({ pet: pet._id }),
   ]);
   await Pet.findByIdAndDelete(pet._id);
 

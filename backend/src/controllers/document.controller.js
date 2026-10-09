@@ -11,30 +11,42 @@ const listForPet = asyncHandler(async (req, res) => {
   res.json(documents);
 });
 
-// POST /pets/:id/documents — multipart/form-data; file is handled by upload.middleware before we get here
+// POST /pets/:id/documents — multipart/form-data; file is handled by upload.middleware before we get here.
+// multer saves the file before this runs, so any failure below deletes it again.
 const createForPet = asyncHandler(async (req, res) => {
-  await findOwnedPetOrFail(req.params.id, req.userId);
-
-  const { category, clientLocalId } = req.body;
-
   if (!req.file) throw new ApiError(400, 'A file is required');
-  if (!category) throw new ApiError(400, 'category is required');
+  const uploadedUrl = `/uploads/${req.file.filename}`;
 
-  if (clientLocalId) {
-    const existing = await Document.findOne({ pet: req.params.id, clientLocalId });
-    if (existing) return res.status(200).json(existing);
+  try {
+    await findOwnedPetOrFail(req.params.id, req.userId);
+
+    const { category } = req.body;
+    const clientLocalId = typeof req.body.clientLocalId === 'string' ? req.body.clientLocalId : undefined;
+    if (!category || typeof category !== 'string') throw new ApiError(400, 'category is required');
+
+    if (clientLocalId) {
+      const existing = await Document.findOne({ pet: req.params.id, clientLocalId });
+      if (existing) {
+        await removeUploadedFile(uploadedUrl);
+        return res.status(200).json(existing);
+      }
+    }
+
+    const document = await Document.create({
+      pet: req.params.id,
+      category,
+      clientLocalId,
+      fileUrl: uploadedUrl,
+      originalName: req.file.originalname.slice(0, 200),
+      mimeType: req.file.mimetype,
+      sizeBytes: req.file.size,
+    });
+
+    res.status(201).json(document);
+  } catch (err) {
+    await removeUploadedFile(uploadedUrl);
+    throw err;
   }
-
-  const document = await Document.create({
-    pet: req.params.id,
-    category,
-    clientLocalId,
-    fileUrl: `/uploads/${req.file.filename}`,
-    originalName: req.file.originalname,
-    mimeType: req.file.mimetype,
-  });
-
-  res.status(201).json(document);
 });
 
 // DELETE /documents/:id — removes the record and the file on disk

@@ -34,9 +34,10 @@ export const Navbar: React.FC = () => {
     return () => { clearInterval(timer); document.removeEventListener('visibilitychange', onVisible); };
   }, [isAuthenticated, fetchReminders]);
 
-  // Browser alert for newly urgent reminders (only if the user turned alerts on)
+  // Browser alerts for urgent reminders and timed appointment alerts (only if the user turned alerts on)
   useEffect(() => {
-    if (isAuthenticated) notifyDueReminders(reminders, () => navigate('/features?tab=reminders'));
+    if (!isAuthenticated) return;
+    return notifyDueReminders(reminders, () => navigate('/features?tab=reminders'));
   }, [isAuthenticated, reminders, navigate]);
 
   const navLinks = [

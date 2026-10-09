@@ -1,8 +1,10 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { User, Lock, Palette, Bell, AlertTriangle, Sun, Moon, Monitor } from 'lucide-react';
+import { User, Lock, Palette, Bell, AlertTriangle, Sun, Moon, Monitor, Mail, Send, ExternalLink, Info, Download, Loader2 } from 'lucide-react';
 import { useAppStore } from '../store/useAppStore';
 import { inputCls, labelCls, primaryBtnCls } from '../components/common/Modal';
+import { apiRequest } from '../lib/api';
+import { CURRENCY_OPTIONS } from '../lib/money';
 import { DEFAULT_PREFERENCES, ThemePreference, UserPreferences } from '../types';
 import { NotificationToggle } from '../components/common/NotificationToggle';
 
@@ -12,7 +14,7 @@ const sub = 'text-sm text-paw-secondary dark:text-paw-warm-sage/80 mb-5';
 const errText = (err: unknown, fallback: string) => `❌ ${err instanceof Error ? err.message : fallback}`;
 
 export const Settings: React.FC = () => {
-  const { user, updateProfile, changePassword, deleteAccount, themePreference, setThemePreference, showToast } = useAppStore();
+  const { user, token, updateProfile, changePassword, deleteAccount, themePreference, setThemePreference, showToast, sendTestReminderEmail, downloadMyData } = useAppStore();
   const navigate = useNavigate();
 
   const [name, setName] = useState(user?.name || '');
@@ -24,8 +26,23 @@ export const Settings: React.FC = () => {
   const [savingPassword, setSavingPassword] = useState(false);
 
   const prefs: UserPreferences = user?.preferences ?? DEFAULT_PREFERENCES;
+  const emailOn = prefs.emailReminders ?? false;
+
   const [savingPrefs, setSavingPrefs] = useState(false);
 
+  const [sendingTest, setSendingTest] = useState(false);
+  const [testResult, setTestResult] = useState<{ text: string; tone: 'ok' | 'warn' | 'error'; previewUrl?: string | null } | null>(null);
+  // Whether the server can actually deliver email (null = not checked yet)
+  const [smtpConfigured, setSmtpConfigured] = useState<boolean | null>(null);
+
+  useEffect(() => {
+    if (!emailOn || smtpConfigured !== null) return;
+    apiRequest<{ smtpConfigured: boolean }>('/reminders/email-status', { token })
+      .then((r) => setSmtpConfigured(r.smtpConfigured))
+      .catch(() => {});
+  }, [emailOn, smtpConfigured, token]);
+
+  const [downloading, setDownloading] = useState(false);
   const [deleteConfirm, setDeleteConfirm] = useState('');
   const [deleting, setDeleting] = useState(false);
 
@@ -68,8 +85,34 @@ export const Settings: React.FC = () => {
     } finally { setSavingPrefs(false); }
   };
 
+  // Older saved settings may not have every type yet — missing means on
+  const reminderOn = (key: keyof UserPreferences['reminders']) => prefs.reminders[key] !== false;
   const toggleReminder = (key: keyof UserPreferences['reminders']) =>
-    savePrefs({ ...prefs, reminders: { ...prefs.reminders, [key]: !prefs.reminders[key] } });
+    savePrefs({ ...prefs, reminders: { ...prefs.reminders, [key]: !reminderOn(key) } });
+
+  const toggleEmailReminders = () =>
+    savePrefs({ ...prefs, emailReminders: !prefs.emailReminders });
+
+  const handleSendTest = async () => {
+    setSendingTest(true);
+    setTestResult(null);
+    try {
+      const result = await sendTestReminderEmail();
+      setTestResult({ text: result.message, tone: result.delivered ? 'ok' : 'warn', previewUrl: result.previewUrl });
+    } catch (err) {
+      setTestResult({ text: errText(err, 'Could not send the test email.'), tone: 'error' });
+    } finally { setSendingTest(false); }
+  };
+
+  const handleDownload = async () => {
+    setDownloading(true);
+    try {
+      await downloadMyData();
+      showToast('📦 Your data has been downloaded.');
+    } catch (err) {
+      showToast(errText(err, 'Could not download your data.'));
+    } finally { setDownloading(false); }
+  };
 
   const handleDelete = async () => {
     if (deleteConfirm.trim().toLowerCase() !== user.email) { showToast('⚠️ Type your account email exactly to confirm.'); return; }
@@ -95,6 +138,7 @@ export const Settings: React.FC = () => {
     { key: 'vaccination', label: 'Vaccinations', hint: 'Due soon and overdue vaccines' },
     { key: 'appointment', label: 'Appointments', hint: 'Upcoming vet visits' },
     { key: 'weight', label: 'Weight check-ins', hint: 'Nudges when no weight has been logged for a month' },
+    { key: 'medication', label: 'Medications', hint: "Doses still to give today, and courses that are about to end" },
   ];
 
   return (
@@ -145,6 +189,17 @@ export const Settings: React.FC = () => {
           </div>
         </section>
 
+        {/* Money */}
+        <section className={card}>
+          <h2 className={heading}><span aria-hidden>💱</span> Currency</h2>
+          <p className={sub}>Used for expenses and spending totals.</p>
+          <select value={prefs.currency ?? 'INR'} disabled={savingPrefs} aria-label="Currency"
+            onChange={(e) => savePrefs({ ...prefs, currency: e.target.value as UserPreferences['currency'] })}
+            className={inputCls}>
+            {CURRENCY_OPTIONS.map((c) => <option key={c.value} value={c.value}>{c.label}</option>)}
+          </select>
+        </section>
+
         {/* Reminders */}
         <section className={card}>
           <h2 className={heading}><Bell className="w-5 h-5" /> Reminders</h2>
@@ -156,7 +211,7 @@ export const Settings: React.FC = () => {
                   <div className="text-sm font-bold text-paw-dark dark:text-white">{opt.label}</div>
                   <div className="text-xs text-paw-secondary dark:text-paw-warm-sage">{opt.hint}</div>
                 </div>
-                <input type="checkbox" checked={prefs.reminders[opt.key]} disabled={savingPrefs} onChange={() => toggleReminder(opt.key)}
+                <input type="checkbox" checked={reminderOn(opt.key)} disabled={savingPrefs} onChange={() => toggleReminder(opt.key)}
                   className="w-5 h-5 accent-paw-forest" />
               </label>
             ))}
@@ -178,7 +233,80 @@ export const Settings: React.FC = () => {
               </div>
               <NotificationToggle />
             </div>
+
+            {/* ── Email Reminders ── */}
+            <div className="rounded-2xl bg-paw-cream dark:bg-paw-darkcard border border-paw-soft-sage/60 dark:border-paw-darkborder overflow-hidden">
+              <label className="flex items-center justify-between gap-4 p-4 cursor-pointer">
+                <div className="flex items-center gap-3">
+                  <span className="flex items-center justify-center w-8 h-8 rounded-xl bg-paw-forest/10 dark:bg-paw-forest/20">
+                    <Mail className="w-4 h-4 text-paw-forest dark:text-paw-warm-sage" />
+                  </span>
+                  <div>
+                    <div className="text-sm font-bold text-paw-dark dark:text-white">Email reminders</div>
+                    <div className="text-xs text-paw-secondary dark:text-paw-warm-sage">
+                      A daily digest at 8:00 AM, plus a confirmation with a calendar invite whenever you book or move a vet visit — sent to <span className="font-semibold">{user.email}</span>
+                    </div>
+                  </div>
+                </div>
+                <input
+                  type="checkbox"
+                  checked={emailOn}
+                  disabled={savingPrefs}
+                  onChange={toggleEmailReminders}
+                  className="w-5 h-5 accent-paw-forest"
+                />
+              </label>
+
+              {/* Test-send button — only visible when email reminders are on */}
+              {emailOn && (
+                <div className="px-4 pb-4 border-t border-paw-soft-sage/40 dark:border-paw-darkborder pt-3 flex flex-col gap-3">
+                  {smtpConfigured === false && (
+                    <div className="flex items-start gap-2 p-3 rounded-xl bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-900/40 text-xs text-amber-800 dark:text-amber-300">
+                      <Info className="w-4 h-4 flex-shrink-0 mt-px" />
+                      <span>Email sending isn't set up on the server yet, so emails can't reach your inbox. You can still send a test to preview exactly what you'd receive.</span>
+                    </div>
+                  )}
+                  <div className="flex flex-wrap items-center gap-3">
+                    <button
+                      id="send-test-email-btn"
+                      onClick={handleSendTest}
+                      disabled={sendingTest}
+                      className="flex items-center gap-2 px-4 py-2 rounded-full text-xs font-bold border border-paw-forest text-paw-forest dark:text-paw-warm-sage dark:border-paw-warm-sage hover:bg-paw-forest hover:text-white dark:hover:bg-paw-forest transition-colors disabled:opacity-50"
+                    >
+                      <Send className="w-3.5 h-3.5" />
+                      {sendingTest ? 'Sending…' : 'Send test email now'}
+                    </button>
+                  </div>
+                  {testResult && (
+                    <div className={`text-xs font-medium space-y-1.5 ${
+                      testResult.tone === 'error' ? 'text-rose-600 dark:text-rose-400' : testResult.tone === 'warn' ? 'text-amber-700 dark:text-amber-400' : 'text-emerald-600 dark:text-emerald-400'
+                    }`}>
+                      <p>{testResult.text}</p>
+                      {testResult.previewUrl && (
+                        <a href={testResult.previewUrl} target="_blank" rel="noopener noreferrer"
+                          className="inline-flex items-center gap-1 font-bold text-paw-forest dark:text-paw-sage hover:underline">
+                          Open email preview <ExternalLink className="w-3 h-3" />
+                        </a>
+                      )}
+                    </div>
+                  )}
+                  <p className="text-xs text-paw-secondary dark:text-paw-warm-sage/70">
+                    Sends today's digest right now so you can check it arrives. After that it's automatic every morning at 8:00 AM.
+                  </p>
+                </div>
+              )}
+            </div>
           </div>
+        </section>
+
+        {/* Your data */}
+        <section className={card}>
+          <h2 className={heading}><Download className="w-5 h-5" /> Your data</h2>
+          <p className={sub}>Download everything PawPrint stores for your account — pets, health records, medications, expenses and settings — as one file you can keep or move elsewhere.</p>
+          <button onClick={handleDownload} disabled={downloading} className={`${primaryBtnCls} inline-flex items-center gap-2`}>
+            {downloading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />}
+            {downloading ? 'Preparing…' : 'Download my data'}
+          </button>
         </section>
 
         {/* Danger zone */}

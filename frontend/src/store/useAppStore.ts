@@ -11,9 +11,13 @@ import {
   UserPreferences,
   ThemePreference,
   Reminder,
+  Medication,
+  MedicationInput,
+  Expense,
+  ExpenseInput,
 } from '../types';
-import { apiRequest, apiUpload } from '../lib/api';
-import { StorageKeys, readJson, readString, writeJson, writeString, clearAccountData } from '../lib/storage';
+import { apiRequest, apiUpload, apiDownload } from '../lib/api';
+import { StorageKeys, readJson, readString, writeJson, writeString, removeKey, clearAccountData } from '../lib/storage';
 import {
   mapBackendPet,
   mapBackendVaccination,
@@ -21,7 +25,10 @@ import {
   mapBackendAppointment,
   mapBackendDocument,
   mapBackendClinic,
+  mapBackendMedication,
+  mapBackendExpense,
 } from '../lib/adapters';
+import { todayKey } from '../lib/dates';
 
 type VaccinationInput = {
   vaccineName: string;
@@ -59,6 +66,10 @@ interface AppState {
   updateProfile: (input: { name?: string; preferences?: Partial<UserPreferences> }) => Promise<void>;
   changePassword: (currentPassword: string | undefined, newPassword: string) => Promise<void>;
   deleteAccount: (confirmEmail: string) => Promise<void>;
+  sendTestReminderEmail: () => Promise<{ message: string; delivered: boolean; previewUrl?: string | null }>;
+  forgotPassword: (email: string) => Promise<string>;
+  downloadMyData: () => Promise<void>;
+  resetPassword: (token: string, password: string) => Promise<void>;
 
   // Theme — `theme` is what's applied; `themePreference` may be 'system' (follow the OS)
   theme: 'light' | 'dark';
@@ -86,6 +97,8 @@ interface AppState {
     medications?: string[];
     microchipId?: string;
     emergencyContacts?: { name: string; phone: string }[];
+    targetWeightMinKg?: number | null;
+    targetWeightMaxKg?: number | null;
   }) => Promise<void>;
   uploadPetPhoto: (petId: string, file: File) => Promise<void>;
   deletePet: (petId: string) => Promise<void>;
@@ -120,6 +133,24 @@ interface AppState {
   fetchDocumentsForPets: (petIds: string[]) => Promise<void>;
   uploadDocument: (petId: string, file: File, category: string) => Promise<void>;
   deleteDocument: (id: string) => Promise<void>;
+
+  // Medications — courses with today's dose schedule (GET /medications)
+  medications: Medication[];
+  medicationsLoading: boolean;
+  fetchMedications: () => Promise<void>;
+  addMedication: (petId: string, input: MedicationInput) => Promise<void>;
+  updateMedication: (id: string, input: Partial<MedicationInput>) => Promise<void>;
+  deleteMedication: (id: string) => Promise<void>;
+  setDoseGiven: (medicationId: string, slot: number, given: boolean) => Promise<void>;
+
+  // Expenses — what's been spent on each pet (GET /expenses)
+  expenses: Expense[];
+  expensesLoading: boolean;
+  fetchExpenses: () => Promise<void>;
+  addExpense: (petId: string, input: ExpenseInput) => Promise<void>;
+  updateExpense: (id: string, input: Partial<ExpenseInput> & { pet?: string }) => Promise<void>;
+  deleteExpense: (id: string) => Promise<void>;
+  downloadExpensesCsv: (year?: number) => Promise<void>;
 
   // Health Timeline — synthesized from real data
   timeline: HealthTimelineEntry[];
@@ -300,7 +331,7 @@ export const useAppStore = create<AppState>((set, get) => {
 
   const startSession = async (token: string, user: AuthUser) => {
     saveSession(token, user);
-    set({ user, token, isAuthenticated: true, authLoading: false });
+    set({ user, token, isAuthenticated: true, authLoading: false, favoriteClinicIds: user.favoriteClinicIds ?? [] });
     await get().fetchPets();
   };
 
@@ -377,6 +408,9 @@ export const useAppStore = create<AppState>((set, get) => {
         weightRecords: {},
         appointments: [],
         documents: [],
+        medications: [],
+        expenses: [],
+        favoriteClinicIds: [],
         timeline: [],
         reminders: [],
         selectedPetId: '',
@@ -390,9 +424,16 @@ export const useAppStore = create<AppState>((set, get) => {
       const { token } = get();
       if (!token) return;
       try {
-        const user = await apiRequest<AuthUser>('/auth/me', { token });
+        let user = await apiRequest<AuthUser>('/auth/me', { token });
+        // Favourites used to live only in this browser — move them to the account once
+        const local = readJson<string[]>(StorageKeys.favoriteClinics, []);
+        if (local.length && !user.favoriteClinicIds?.length) {
+          const results = await Promise.allSettled(local.map((id) => apiRequest(`/clinics/${id}/favorite`, { method: 'PUT', token })));
+          if (results.some((r) => r.status === 'fulfilled')) user = await apiRequest<AuthUser>('/auth/me', { token });
+        }
+        removeKey(StorageKeys.favoriteClinics);
         writeJson(StorageKeys.user, user);
-        set({ user });
+        set({ user, favoriteClinicIds: user.favoriteClinicIds ?? [] });
       } catch {
         // Non-fatal: the stored user stays in place (a 401 is handled by apiRequest)
       }
@@ -422,6 +463,29 @@ export const useAppStore = create<AppState>((set, get) => {
       const token = requireToken();
       await apiRequest('/auth/me', { method: 'DELETE', token, body: { confirmEmail } });
       get().logout();
+    },
+
+    sendTestReminderEmail: async () => {
+      const token = requireToken();
+      return apiRequest<{ message: string; delivered: boolean; previewUrl?: string | null }>('/reminders/send-test', { method: 'POST', token });
+    },
+
+    downloadMyData: async () => {
+      await apiDownload('/auth/export', requireToken(), 'pawprint-data.json');
+    },
+
+    forgotPassword: async (email) => {
+      const data = await apiRequest<{ message: string }>('/auth/forgot-password', { method: 'POST', body: { email } });
+      return data.message;
+    },
+
+    // A successful reset signs the user straight in
+    resetPassword: async (token, password) => {
+      const data = await apiRequest<{ token: string; user: AuthUser }>('/auth/reset-password', {
+        method: 'POST',
+        body: { token, password },
+      });
+      await startSession(data.token, data.user);
     },
 
     // ── Theme ──
@@ -473,6 +537,8 @@ export const useAppStore = create<AppState>((set, get) => {
             get().fetchWeightsForPets(petIds),
             get().fetchAppointments(),
             get().fetchDocumentsForPets(petIds),
+            get().fetchMedications(),
+            get().fetchExpenses(),
           ]);
         }
         scheduleRemindersRefresh();
@@ -538,6 +604,8 @@ export const useAppStore = create<AppState>((set, get) => {
           vaccinations: state.vaccinations.filter((v) => v.petId !== petId),
           appointments: state.appointments.filter((a) => a.petId !== petId),
           documents: state.documents.filter((d) => d.petId !== petId),
+          medications: state.medications.filter((m) => m.petId !== petId),
+          expenses: state.expenses.filter((e) => e.petId !== petId),
           weightRecords,
         };
       });
@@ -781,12 +849,73 @@ export const useAppStore = create<AppState>((set, get) => {
       if (!token) return;
       set({ remindersLoading: true });
       try {
-        const data = await apiRequest<{ reminders: Reminder[] }>('/reminders', { token });
+        // The browser's date decides which medication doses are "today"
+        const data = await apiRequest<{ reminders: Reminder[] }>(`/reminders?date=${todayKey()}`, { token });
         set({ reminders: data.reminders, remindersLoading: false });
       } catch {
         // Non-fatal: keep the last list rather than blanking the bell
         set({ remindersLoading: false });
       }
+    },
+
+    // ── Medications ──
+    medications: [],
+    medicationsLoading: false,
+
+    fetchMedications: async () => {
+      const { token } = get();
+      if (!token) return;
+      set({ medicationsLoading: true });
+      try {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const raw = await apiRequest<any[]>(`/medications?date=${todayKey()}`, { token });
+        set({ medications: raw.map(mapBackendMedication), medicationsLoading: false });
+      } catch {
+        set({ medicationsLoading: false });
+      }
+    },
+
+    addMedication: async (petId, input) => {
+      const token = requireToken();
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const raw = await apiRequest<any>(`/pets/${petId}/medications?date=${todayKey()}`, { method: 'POST', token, body: input });
+      const med = mapBackendMedication(raw);
+      set((state) => ({ medications: [...state.medications, med] }));
+      scheduleRemindersRefresh();
+      get().showToast(`💊 ${med.name} added to the schedule.`);
+    },
+
+    updateMedication: async (id, input) => {
+      const token = requireToken();
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const raw = await apiRequest<any>(`/medications/${id}?date=${todayKey()}`, { method: 'PUT', token, body: input });
+      const med = mapBackendMedication(raw);
+      set((state) => ({ medications: state.medications.map((m) => (m.id === id ? med : m)) }));
+      scheduleRemindersRefresh();
+      get().showToast(`✅ ${med.name} updated.`);
+    },
+
+    deleteMedication: async (id) => {
+      const token = requireToken();
+      await apiRequest(`/medications/${id}`, { method: 'DELETE', token });
+      set((state) => ({ medications: state.medications.filter((m) => m.id !== id) }));
+      scheduleRemindersRefresh();
+      get().showToast('Medication removed.');
+    },
+
+    setDoseGiven: async (medicationId, slot, given) => {
+      const token = requireToken();
+      const date = todayKey();
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const raw = await apiRequest<any>(
+        given
+          ? `/medications/${medicationId}/doses?date=${date}`
+          : `/medications/${medicationId}/doses?date=${date}&doseDate=${date}&slot=${slot}`,
+        { method: given ? 'POST' : 'DELETE', token, body: given ? { date, slot } : undefined },
+      );
+      const med = mapBackendMedication(raw);
+      set((state) => ({ medications: state.medications.map((m) => (m.id === medicationId ? med : m)) }));
+      scheduleRemindersRefresh();
     },
 
     // ── Clinics (real backend data) ──
@@ -802,7 +931,7 @@ export const useAppStore = create<AppState>((set, get) => {
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const raw = await apiRequest<any[]>(`/clinics/nearby${query}`, { token });
         const favorites = get().favoriteClinicIds;
-        const clinics = raw.map(mapBackendClinic).map((c) => ({ ...c, isFavorite: favorites.includes(c.id) }));
+        const clinics = raw.map(mapBackendClinic).map((c) => ({ ...c, isFavorite: c.isFavorite || favorites.includes(c.id) }));
         set({ clinics, clinicsLoading: false });
       } catch (err: unknown) {
         const msg = err instanceof Error ? err.message : 'Could not load nearby clinics';
@@ -810,18 +939,78 @@ export const useAppStore = create<AppState>((set, get) => {
       }
     },
 
-    // ── Clinic favorites (kept in this browser — no backend favorites endpoint yet) ──
-    favoriteClinicIds: readJson<string[]>(StorageKeys.favoriteClinics, []),
+    // ── Clinic favourites (saved on the account, so they follow the user) ──
+    favoriteClinicIds: storedUser?.favoriteClinicIds ?? [],
     toggleFavoriteClinic: (id) => {
-      const favorites = get().favoriteClinicIds;
-      const exists = favorites.includes(id);
-      const updated = exists ? favorites.filter((f) => f !== id) : [...favorites, id];
-      writeJson(StorageKeys.favoriteClinics, updated);
-      set((state) => ({
-        favoriteClinicIds: updated,
-        clinics: state.clinics.map((c) => (c.id === id ? { ...c, isFavorite: !exists } : c)),
+      const token = get().token;
+      if (!token) return;
+      const previous = get().favoriteClinicIds;
+      const exists = previous.includes(id);
+      const applyFavorites = (ids: string[]) => set((state) => ({
+        favoriteClinicIds: ids,
+        clinics: state.clinics.map((c) => ({ ...c, isFavorite: ids.includes(c.id) })),
+        user: state.user ? { ...state.user, favoriteClinicIds: ids } : state.user,
       }));
-      get().showToast(exists ? 'Clinic removed from your saved list.' : '⭐ Clinic saved to your favourites!');
+
+      // Optimistic: flip the star now, roll back if the server says no
+      applyFavorites(exists ? previous.filter((f) => f !== id) : [...previous, id]);
+      apiRequest<{ favoriteClinicIds: string[] }>(`/clinics/${id}/favorite`, { method: exists ? 'DELETE' : 'PUT', token })
+        .then((res) => {
+          applyFavorites(res.favoriteClinicIds);
+          const { user } = get();
+          if (user) writeJson(StorageKeys.user, user);
+          get().showToast(exists ? 'Clinic removed from your saved list.' : '⭐ Clinic saved to your favourites!');
+        })
+        .catch((err: unknown) => {
+          applyFavorites(previous);
+          get().showToast(`❌ ${err instanceof Error ? err.message : 'Could not update favourites.'}`);
+        });
+    },
+
+    // ── Expenses ──
+    expenses: [],
+    expensesLoading: false,
+
+    fetchExpenses: async () => {
+      const { token } = get();
+      if (!token) return;
+      set({ expensesLoading: true });
+      try {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const raw = await apiRequest<any[]>('/expenses', { token });
+        set({ expenses: raw.map(mapBackendExpense), expensesLoading: false });
+      } catch {
+        set({ expensesLoading: false });
+      }
+    },
+
+    addExpense: async (petId, input) => {
+      const token = requireToken();
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const raw = await apiRequest<any>(`/pets/${petId}/expenses`, { method: 'POST', token, body: input });
+      const expense = mapBackendExpense(raw);
+      set((state) => ({ expenses: [expense, ...state.expenses].sort((a, b) => (a.date < b.date ? 1 : -1)) }));
+      get().showToast('💸 Expense logged.');
+    },
+
+    updateExpense: async (id, input) => {
+      const token = requireToken();
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const raw = await apiRequest<any>(`/expenses/${id}`, { method: 'PUT', token, body: input });
+      const expense = mapBackendExpense(raw);
+      set((state) => ({ expenses: state.expenses.map((e) => (e.id === id ? expense : e)).sort((a, b) => (a.date < b.date ? 1 : -1)) }));
+      get().showToast('✅ Expense updated.');
+    },
+
+    deleteExpense: async (id) => {
+      const token = requireToken();
+      await apiRequest(`/expenses/${id}`, { method: 'DELETE', token });
+      set((state) => ({ expenses: state.expenses.filter((e) => e.id !== id) }));
+      get().showToast('Expense deleted.');
+    },
+
+    downloadExpensesCsv: async (year) => {
+      await apiDownload(`/expenses/export.csv${year ? `?year=${year}` : ''}`, requireToken(), 'pawprint-expenses.csv');
     },
 
     // ── Toasts ──
