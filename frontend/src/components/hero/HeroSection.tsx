@@ -20,12 +20,7 @@ export const HeroSection: React.FC = () => {
       <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-10 sm:pt-16 pb-20 lg:pb-28 grid lg:grid-cols-[1.05fr_1fr] gap-14 lg:gap-10 items-center">
         {/* Copy */}
         <div className="text-center lg:text-left stagger">
-          <span className="inline-flex items-center gap-2 pl-1.5 pr-4 py-1.5 rounded-full bg-white/80 dark:bg-paw-darkcard/80 backdrop-blur border border-paw-line dark:border-paw-darkborder shadow-2xs text-xs font-bold text-paw-dark dark:text-white">
-            <span className="px-2 py-0.5 rounded-full bg-paw-forest text-white text-[10px] uppercase tracking-wider">New</span>
-            Expenses, medications & smart reminders
-          </span>
-
-          <h1 className="mt-6 font-display text-[2.75rem] leading-[1.05] sm:text-6xl lg:text-[4.25rem] font-semibold tracking-tight text-paw-dark dark:text-white">
+          <h1 className="font-display text-[2.75rem] leading-[1.05] sm:text-6xl lg:text-[4.25rem] font-semibold tracking-tight text-paw-dark dark:text-white">
             Every wag, purr &amp; checkup —{' '}
             <span className="relative inline-block">
               <span className="text-gradient">beautifully organised.</span>
