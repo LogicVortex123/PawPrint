@@ -1,12 +1,17 @@
 import React, { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
+import { AuthVisual } from '../components/common/AuthVisual';
 import { User, Mail, Lock, Heart, ArrowRight, AlertCircle, Loader2 } from 'lucide-react';
 import { useAppStore } from '../store/useAppStore';
 import { requestGoogleIdToken } from '../lib/googleIdentity';
 
 export const Signup: React.FC = () => {
   const navigate = useNavigate();
-  const { signup, googleLogin, authLoading, authError, clearAuthError, showToast } = useAppStore();
+  const [params] = useSearchParams();
+  // Back to the page that sent them here (only same-site paths), otherwise the dashboard
+  const redirect = params.get('redirect') || '';
+  const nextPath = redirect.startsWith('/') && !redirect.startsWith('//') ? redirect : '/features';
+  const { signup, googleLogin, createPet, authLoading, authError, clearAuthError, showToast } = useAppStore();
 
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
@@ -15,7 +20,7 @@ export const Signup: React.FC = () => {
   const [passwordMismatch, setPasswordMismatch] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
 
-  // Optional pet info for onboarding personalisation — not sent to backend yet
+  // Optional first pet — created right after the account
   const [petName, setPetName] = useState('');
   const [petSpecies, setPetSpecies] = useState<'dog' | 'cat' | 'other'>('dog');
 
@@ -30,8 +35,12 @@ export const Signup: React.FC = () => {
 
     try {
       await signup(name, email, password);
+      // The optional first pet from this form becomes their first profile
+      if (petName.trim()) {
+        try { await createPet({ name: petName.trim(), species: petSpecies }); } catch { /* they can add it from the dashboard */ }
+      }
       showToast(`Welcome to PawPrint, ${name}! 🐾`);
-      navigate('/analytics');
+      navigate(nextPath);
     } catch {
       // error already in store
     }
@@ -48,7 +57,7 @@ export const Signup: React.FC = () => {
       const idToken = await requestGoogleIdToken();
       await googleLogin(idToken);
       showToast('Welcome to PawPrint! 🐾');
-      navigate('/analytics');
+      navigate(nextPath);
     } catch (err) {
       // googleLogin failures land in authError (banner shows it); token-request
       // failures (cancelled prompt, missing config) don't touch the store
@@ -61,7 +70,9 @@ export const Signup: React.FC = () => {
   };
 
   return (
-    <div className="min-h-[90vh] flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8 relative transition-colors duration-200">
+    <div className="min-h-screen grid lg:grid-cols-2 bg-paw-cream dark:bg-paw-darkbg">
+      <AuthVisual image="/images/cat-dog-cuddle.webp" title="Care, beautifully organised." text="Vaccines, doses, weight, visits and costs — one calm place for every pet you love." />
+      <div className="flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8 relative">
       {/* Background blobs */}
       <div className="absolute top-1/4 right-1/4 w-96 h-96 bg-paw-light-sage/50 dark:bg-paw-darksurface/30 rounded-full blur-3xl -z-10 pointer-events-none" />
       <div className="absolute bottom-10 left-1/4 w-80 h-80 bg-paw-soft-sage/40 dark:bg-paw-darkcard/20 organic-blob-2 blur-2xl -z-10 pointer-events-none" />
@@ -264,6 +275,7 @@ export const Signup: React.FC = () => {
           </div>
 
         </div>
+      </div>
       </div>
     </div>
   );

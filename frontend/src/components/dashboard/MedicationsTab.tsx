@@ -4,6 +4,7 @@ import { useAppStore } from '../../store/useAppStore';
 import { Modal, inputCls, labelCls, primaryBtnCls, dangerBtnCls } from '../common/Modal';
 import { Medication, MedicationFrequency, MedicationInput, Pet } from '../../types';
 import { todayKey, formatDateKey } from '../../lib/dates';
+import { EmptyState, ProgressRing, SectionHeader } from '../ui';
 
 const FREQUENCY_OPTIONS: { value: MedicationFrequency; label: string }[] = [
   { value: 'once_daily', label: 'Once a day' },
@@ -119,7 +120,7 @@ const MedicationFormModal: React.FC<{ pet: Pet; medication?: Medication; onClose
 
 // ── Today's checklist row ────────────────────────────────────────────────────
 
-const DoseChecklist: React.FC<{ med: Medication }> = ({ med }) => {
+export const DoseChecklist: React.FC<{ med: Medication }> = ({ med }) => {
   const { setDoseGiven, showToast } = useAppStore();
   const [busySlot, setBusySlot] = useState<number | null>(null);
   const isAsNeeded = med.frequency === 'as_needed';
@@ -187,11 +188,12 @@ const MedicationCard: React.FC<{ med: Medication; onEdit: () => void }> = ({ med
   const doneToday = s.dueToday > 0 && s.remainingToday === 0;
 
   return (
-    <div className={`bg-paw-cream dark:bg-paw-darkcard rounded-3xl p-6 border shadow-soft space-y-4 ${doneToday ? 'border-emerald-300 dark:border-emerald-800' : 'border-paw-soft-sage/60 dark:border-paw-darkborder'}`}>
+    <div className={`card card-interactive p-6 space-y-4 ${doneToday ? 'ring-2 ring-emerald-300/80 dark:ring-emerald-700/60' : ''}`}>
       <div className="flex items-start justify-between gap-3">
         <div className="flex items-start gap-3 min-w-0">
-          <div className="w-11 h-11 rounded-2xl bg-paw-light-sage dark:bg-paw-darksurface text-paw-forest dark:text-paw-warm-sage flex items-center justify-center flex-shrink-0">
+          <div className="relative w-11 h-11 rounded-2xl bg-violet-50 dark:bg-violet-500/15 text-violet-700 dark:text-violet-300 flex items-center justify-center flex-shrink-0">
             <Pill className="w-5 h-5" />
+            {doneToday && <span className="absolute -top-1 -right-1 w-5 h-5 rounded-full bg-emerald-500 text-white flex items-center justify-center ring-2 ring-white dark:ring-paw-darkcard animate-pop"><Check className="w-3 h-3" /></span>}
           </div>
           <div className="min-w-0">
             <h3 className="text-base font-bold text-paw-dark dark:text-white">{med.name}{med.dosage && <span className="font-semibold text-paw-secondary dark:text-paw-warm-sage"> · {med.dosage}</span>}</h3>
@@ -206,9 +208,8 @@ const MedicationCard: React.FC<{ med: Medication; onEdit: () => void }> = ({ med
             </p>
           </div>
         </div>
-        <button onClick={onEdit} title="Edit or remove" aria-label={`Edit ${med.name}`}
-          className="p-1.5 rounded-full text-paw-secondary hover:text-paw-forest hover:bg-paw-light-sage dark:hover:bg-paw-darksurface transition-colors">
-          <Pencil className="w-3.5 h-3.5" />
+        <button onClick={onEdit} title="Edit or remove" aria-label={`Edit ${med.name}`} className="icon-btn -mr-2 -mt-1">
+          <Pencil className="w-4 h-4" />
         </button>
       </div>
 
@@ -219,7 +220,7 @@ const MedicationCard: React.FC<{ med: Medication; onEdit: () => void }> = ({ med
       )}
 
       {med.frequency !== 'as_needed' && (
-        <div className="pt-4 border-t border-paw-soft-sage/30 dark:border-paw-darkborder/50 space-y-3">
+        <div className="pt-4 border-t border-paw-line dark:border-paw-darkborder space-y-3">
           {/* 14-day grid: green = all given, amber = some, red = missed, faint = not due */}
           <div>
             <div className="flex items-center justify-between text-[11px] font-bold text-paw-secondary dark:text-paw-warm-sage mb-1.5">
@@ -273,40 +274,32 @@ export const MedicationsTab: React.FC<{ pet: Pet }> = ({ pet }) => {
 
   return (
     <div className="space-y-8 animate-fadeIn">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-6 border-b border-paw-soft-sage/30 dark:border-paw-darkborder/50">
-        <div>
-          <div className="inline-flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-paw-forest dark:text-paw-sage"><Pill className="w-4 h-4" /><span>Medication Tracker</span></div>
-          <h2 className="text-3xl font-extrabold text-paw-dark dark:text-white">Today's Doses &amp; Schedule</h2>
-          <p className="text-paw-secondary dark:text-paw-warm-sage/80 text-sm pt-1">
-            Tick off each dose as you give it. Doses still due show up in the reminder bell and your daily email.
-          </p>
-        </div>
-        <button onClick={() => setEditing('new')}
-          className="flex items-center gap-1.5 px-5 py-2.5 rounded-full text-xs font-bold bg-paw-forest text-white hover:bg-paw-deep shadow-soft w-fit">
-          <Plus className="w-3.5 h-3.5" /><span>Add Medication</span>
-        </button>
-      </div>
+      <SectionHeader icon={Pill} tone="violet" eyebrow="Medications" title="Today's doses & schedule"
+        description="Tick off each dose as you give it. Doses still due show up in the reminder bell and your daily email."
+        actions={<button onClick={() => setEditing('new')} className="btn-primary"><Plus className="w-4 h-4" /> Add medication</button>} />
 
       {dueToday > 0 && (
-        <div className={`flex items-center gap-4 p-5 rounded-2xl border ${givenToday >= dueToday ? 'bg-emerald-50 dark:bg-emerald-950/20 border-emerald-200 dark:border-emerald-900/40' : 'bg-amber-50 dark:bg-amber-950/20 border-amber-200 dark:border-amber-900/40'}`}>
-          <div className="text-3xl font-extrabold text-paw-dark dark:text-white">{givenToday}/{dueToday}</div>
+        <div className={`flex items-center gap-5 p-5 rounded-3xl border ${givenToday >= dueToday ? 'bg-emerald-50 dark:bg-emerald-500/10 border-emerald-200 dark:border-emerald-500/20' : 'bg-violet-50 dark:bg-violet-500/10 border-violet-200 dark:border-violet-500/20'}`}>
+          <ProgressRing value={(givenToday / dueToday) * 100} size={64} stroke={7} className={givenToday >= dueToday ? 'stroke-emerald-500' : 'stroke-violet-500'} trackClassName="stroke-white dark:stroke-white/10">
+            <span className="text-sm font-extrabold text-paw-dark dark:text-white">{givenToday}/{dueToday}</span>
+          </ProgressRing>
           <div className="flex-1">
             <div className="text-sm font-bold text-paw-dark dark:text-white">{givenToday >= dueToday ? `All of ${pet.name}'s doses are done for today 🎉` : `doses given today for ${pet.name}`}</div>
-            <div className="mt-2 h-2 rounded-full bg-white/70 dark:bg-black/20 overflow-hidden">
-              <div className="h-full rounded-full bg-emerald-500 transition-all" style={{ width: `${(givenToday / dueToday) * 100}%` }} />
-            </div>
+            <div className="text-xs text-paw-secondary dark:text-paw-warm-sage mt-0.5">{givenToday >= dueToday ? 'Great job — see you tomorrow.' : `${dueToday - givenToday} still to give. Tap a dose below once it's given.`}</div>
           </div>
         </div>
       )}
 
       {active.length === 0 ? (
-        <div className="text-center py-10 text-paw-secondary dark:text-paw-warm-sage/60">
-          {medicationsLoading ? <Loader2 className="w-8 h-8 mx-auto mb-3 animate-spin" /> : <Pill className="w-10 h-10 mx-auto mb-3 opacity-40" />}
-          <p className="font-semibold">{medicationsLoading ? 'Loading medications…' : `No current medications for ${pet.name}.`}</p>
-          {!medicationsLoading && <p className="text-xs mt-1">Add a course (dose, how often, start and end dates) and PawPrint will build a daily checklist and remind you.</p>}
-        </div>
+        medicationsLoading ? (
+          <div className="py-10 flex justify-center"><Loader2 className="w-8 h-8 animate-spin text-violet-500" /></div>
+        ) : (
+          <EmptyState icon={Pill} tone="violet" image="/images/pug-sweater.webp" title={`No current medications for ${pet.name}`}
+            text="Add a course (dose, how often, start and end dates) and PawPrint will build a daily checklist and remind you."
+            action={<button onClick={() => setEditing('new')} className="btn-primary"><Plus className="w-4 h-4" /> Add medication</button>} />
+        )
       ) : (
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 stagger">
           {active.map((med) => <MedicationCard key={med.id} med={med} onEdit={() => setEditing(med)} />)}
         </div>
       )}
@@ -320,7 +313,7 @@ export const MedicationsTab: React.FC<{ pet: Pet }> = ({ pet }) => {
           {showFinished && (
             <ul className="mt-3 space-y-2">
               {finished.map((med) => (
-                <li key={med.id} className="flex items-center justify-between gap-3 p-4 rounded-2xl bg-paw-cream dark:bg-paw-darkcard border border-paw-soft-sage/50 dark:border-paw-darkborder text-sm">
+                <li key={med.id} className="card flex items-center justify-between gap-3 p-4 text-sm">
                   <div>
                     <span className="font-bold text-paw-dark dark:text-white">{med.name}</span>
                     <span className="text-paw-secondary dark:text-paw-warm-sage"> · {med.schedule.frequencyLabel} · {formatDateKey(med.startDate)} – {med.endDate ? formatDateKey(med.endDate) : 'ongoing'}</span>

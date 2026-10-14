@@ -4,7 +4,7 @@ import { CheckCircle2, Clock, Sparkles, Rocket } from 'lucide-react';
 
 export const Roadmap: React.FC = () => {
   return (
-    <div className="py-12 lg:py-24 transition-colors duration-200 relative overflow-hidden">
+    <div className="pt-8 pb-24 lg:pb-28 transition-colors duration-200 relative overflow-hidden">
       {/* Background organic curves */}
       <div className="absolute top-12 left-10 w-96 h-96 bg-[#E5EFE8] dark:bg-paw-darksurface/30 rounded-full blur-3xl -z-10 pointer-events-none" />
       <div className="absolute bottom-16 right-10 w-80 h-80 bg-[#DCEBE2]/50 dark:bg-paw-darkcard/20 organic-blob-1 blur-2xl -z-10 pointer-events-none" />
@@ -15,18 +15,18 @@ export const Roadmap: React.FC = () => {
         <div className="text-center max-w-3xl mx-auto mb-16 space-y-4">
           <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-[#E2EDE6] dark:bg-paw-darksurface border border-[#D0E2D5] dark:border-paw-darkborder text-xs font-bold uppercase tracking-wider text-paw-forest dark:text-paw-warm-sage">
             <Rocket className="w-3.5 h-3.5" />
-            <span>Product Evolution & Milestones</span>
+            <span>What’s here & what’s next</span>
           </div>
 
-          <h1 className="text-4xl sm:text-5xl lg:text-6xl font-extrabold text-paw-dark dark:text-white tracking-tight font-sans">
+          <h1 className="font-display text-5xl sm:text-6xl font-semibold text-paw-dark dark:text-white tracking-tight">
             The PawPrint{' '}
-            <span className="font-script text-5xl sm:text-6xl lg:text-7xl text-paw-forest dark:text-paw-warm-sage">
+            <span className="text-gradient">
               Roadmap
             </span>
           </h1>
 
           <p className="text-base sm:text-lg text-paw-secondary dark:text-paw-warm-sage/80 pt-1 leading-relaxed">
-            Follow our journey from foundational pet profile architecture to native mobile app store releases and intelligent health tracking.
+            What you can do with PawPrint today, and what we’re building next.
           </p>
         </div>
 
@@ -68,7 +68,7 @@ export const Roadmap: React.FC = () => {
                       isEven ? 'sm:mr-auto sm:text-right' : 'sm:ml-auto sm:text-left'
                     }`}
                   >
-                    <div className="bg-[#FAFAF6] dark:bg-paw-darksurface rounded-3xl p-6 sm:p-8 border border-paw-soft-sage/70 dark:border-paw-darkborder shadow-soft hover:shadow-soft-lg transition-all duration-300 hover:-translate-y-1 text-left">
+                    <div className="card card-interactive p-6 sm:p-8 text-left animate-slideUp">
                       
                       {/* Phase Tag & Status Badge */}
                       <div className="flex items-center justify-between gap-2 mb-3">
@@ -99,7 +99,7 @@ export const Roadmap: React.FC = () => {
                       {/* Deliverables checklist */}
                       <div className="pt-3 border-t border-paw-soft-sage/30 dark:border-paw-darkborder/50 space-y-2">
                         <div className="text-[11px] font-bold text-paw-dark dark:text-white uppercase tracking-wider">
-                          Key Deliverables:
+                          What’s included
                         </div>
                         <ul className="space-y-1.5 text-xs text-paw-secondary dark:text-paw-warm-sage">
                           {phase.deliverables.map((d, i) => (

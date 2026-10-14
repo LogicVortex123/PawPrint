@@ -1,114 +1,69 @@
 import React from 'react';
-import { Link } from 'react-router-dom';
-import { Github } from 'lucide-react';
-import { PawIcon, CatDogLineArt } from './OrganicDeco';
+import { Link, useLocation } from 'react-router-dom';
+import { Github, ArrowRight, Heart } from 'lucide-react';
+import { PawIcon } from './OrganicDeco';
+import { useAppStore } from '../../store/useAppStore';
 
 const GITHUB_URL = 'https://github.com/LogicVortex123/PawPrint';
 
+const COLUMNS = [
+  { title: 'Product', links: [['Features', '/#features'], ['How it works', '/#how-it-works'], ['Roadmap', '/roadmap'], ['About', '/about']] },
+  { title: 'Care tools', links: [['Vaccinations', '/features?tab=vaccinations'], ['Medications', '/features?tab=medications'], ['Expenses', '/features?tab=expenses'], ['Nearby clinics', '/features?tab=nearby-clinics']] },
+  { title: 'Account', links: [['Log in', '/login'], ['Create account', '/signup'], ['Dashboard', '/features'], ['Settings', '/settings']] },
+];
+
 export const Footer: React.FC = () => {
+  const { isAuthenticated } = useAppStore();
+  const { pathname } = useLocation();
   const year = new Date().getFullYear();
 
-  const exploreLinks = [
-    { label: 'Home', path: '/' },
-    { label: 'Features', path: '/features' },
-    { label: 'About', path: '/about' },
-    { label: 'Roadmap', path: '/roadmap' },
-  ];
-
-  const accountLinks = [
-    { label: 'Analytics', path: '/analytics' },
-    { label: 'Login', path: '/login' },
-    { label: 'Sign Up', path: '/signup' },
-  ];
-
   return (
-    <footer className="print:hidden relative bg-[#1A3E34] text-white overflow-hidden pt-16 pb-8 transition-colors duration-200">
+    <footer className="print:hidden relative overflow-hidden bg-paw-deep text-white">
+      <div className="absolute inset-0 bg-paw-pattern opacity-[0.07]" aria-hidden />
+      <div className="absolute -top-32 -right-32 w-96 h-96 rounded-full bg-emerald-400/10 blur-3xl" aria-hidden />
+      <PawIcon className="absolute bottom-10 right-[8%] w-24 h-24 text-white/[0.04] rotate-12" />
 
-      {/* Organic wavy top border, matching the hill silhouettes used elsewhere on the site */}
-      <div className="absolute top-0 left-0 right-0 w-full overflow-hidden leading-none pointer-events-none -translate-y-[98%]">
-        <svg viewBox="0 0 1440 80" fill="none" preserveAspectRatio="none" className="w-full h-12 sm:h-16 text-[#1A3E34]">
-          <path d="M0,40 C320,80 720,0 1100,50 C1280,75 1380,30 1440,40 L1440,80 L0,80 Z" fill="currentColor" />
-        </svg>
-      </div>
+      <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        {/* CTA strip (the home page ends with its own banner) */}
+        {pathname !== '/' && <div className="py-12 flex flex-col md:flex-row md:items-center justify-between gap-6 border-b border-white/10">
+          <div>
+            <h2 className="font-display text-3xl sm:text-4xl font-semibold tracking-tight">Ready when they need you.</h2>
+            <p className="mt-2 text-emerald-100/75">Every vaccine, dose and visit — remembered for you.</p>
+          </div>
+          <Link to={isAuthenticated ? '/features' : '/signup'} className="btn btn-lg bg-white text-paw-forest hover:bg-emerald-50 shadow-soft-lg group w-fit">
+            {isAuthenticated ? 'Open dashboard' : 'Get started free'} <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+          </Link>
+        </div>}
 
-      {/* Faint floating paw prints — kept as background texture, not competing with real content */}
-      <div className="absolute top-10 left-[8%] opacity-[0.06] pointer-events-none"><PawIcon className="w-16 h-16 text-[#A8C5B3]" /></div>
-      <div className="absolute bottom-16 right-[6%] opacity-[0.06] pointer-events-none"><PawIcon className="w-20 h-20 text-[#A8C5B3]" /></div>
-      <div className="absolute -top-12 -right-12 w-64 h-64 rounded-full bg-white/[0.03] pointer-events-none" />
-      <div className="absolute -bottom-10 -left-10 w-60 h-60 rounded-full bg-white/[0.03] pointer-events-none" />
-
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
-
-        {/* Main grid: brand + description on the left, real navigation links on the right */}
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 pb-12 border-b border-white/10">
-
-          {/* Brand column */}
-          <div className="lg:col-span-5 space-y-5">
-            <Link to="/" className="inline-flex items-center gap-3 group">
-              <div className="w-10 h-10 rounded-full overflow-hidden border border-white/30 shadow-sm group-hover:scale-105 transition-transform">
-                <img src="/logo.jpeg" alt="PawPrint" className="w-full h-full object-cover" />
-              </div>
-              <span className="text-2xl font-bold tracking-tight text-white font-sans">PawPrint</span>
+        <div className="py-12 grid grid-cols-2 md:grid-cols-12 gap-10">
+          <div className="col-span-2 md:col-span-4 space-y-4">
+            <Link to="/" className="inline-flex items-center gap-2.5">
+              <span className="w-10 h-10 rounded-xl overflow-hidden ring-1 ring-white/20"><img src="/logo.jpeg" alt="" className="w-full h-full object-cover" /></span>
+              <span className="text-xl font-extrabold tracking-tight">Paw<span className="text-paw-warm-sage">Print</span></span>
             </Link>
-
-            <p className="text-sm text-[#C9DFD2] leading-relaxed max-w-sm">
-              Pet care &amp; health tracking. Care for their health, keep their records together, and stay ready for any vet visit.
-            </p>
-
-            <div className="flex items-center gap-3 pt-1">
-              <a
-                href={GITHUB_URL}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-flex items-center gap-2 px-4 py-2 rounded-full text-xs font-semibold text-white bg-white/10 hover:bg-white/20 border border-white/15 transition-colors"
-              >
-                <Github className="w-4 h-4" />
-                <span>View on GitHub</span>
-              </a>
-            </div>
-
-            {/* Minimalist dog & cat line-art, kept as a distinctive signature touch */}
-            <div className="pt-2 opacity-80">
-              <CatDogLineArt className="w-32 sm:w-36 h-auto text-white/70" />
-            </div>
+            <p className="text-sm text-emerald-100/70 max-w-xs leading-relaxed">The calm, complete health record for your dogs, cats and every pet in between.</p>
+            <a href={GITHUB_URL} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-2 px-4 py-2 rounded-full text-xs font-bold bg-white/10 hover:bg-white/20 border border-white/10 transition-colors">
+              <Github className="w-4 h-4" /> View on GitHub
+            </a>
           </div>
-
-          {/* Explore links */}
-          <div className="lg:col-span-3 lg:col-start-7">
-            <h3 className="text-xs font-extrabold uppercase tracking-widest text-[#8AB29E] mb-4">Explore</h3>
-            <ul className="space-y-2.5">
-              {exploreLinks.map((link) => (
-                <li key={link.path}>
-                  <Link to={link.path} className="text-sm text-[#D0E5DA] hover:text-white transition-colors">
-                    {link.label}
-                  </Link>
-                </li>
-              ))}
-            </ul>
-          </div>
-
-          {/* Account links */}
-          <div className="lg:col-span-3">
-            <h3 className="text-xs font-extrabold uppercase tracking-widest text-[#8AB29E] mb-4">Account</h3>
-            <ul className="space-y-2.5">
-              {accountLinks.map((link) => (
-                <li key={link.path}>
-                  <Link to={link.path} className="text-sm text-[#D0E5DA] hover:text-white transition-colors">
-                    {link.label}
-                  </Link>
-                </li>
-              ))}
-            </ul>
+          {COLUMNS.map((col) => (
+            <div key={col.title} className="md:col-span-2 md:col-start-auto">
+              <h3 className="text-[11px] font-extrabold uppercase tracking-[0.16em] text-paw-warm-sage">{col.title}</h3>
+              <ul className="mt-4 space-y-2.5">
+                {col.links.map(([label, to]) => (
+                  <li key={label}><Link to={to} className="text-sm text-emerald-50/80 hover:text-white hover:translate-x-0.5 inline-block transition-all">{label}</Link></li>
+                ))}
+              </ul>
+            </div>
+          ))}
+          <div className="col-span-2 md:col-span-2 flex md:justify-end items-start">
+            <img src="/images/cat-dog-cuddle.webp" alt="" loading="lazy" className="w-28 h-28 rounded-full object-cover ring-4 ring-white/10 shadow-soft-xl" />
           </div>
         </div>
 
-        {/* Bottom bar */}
-        <div className="pt-8 flex flex-col sm:flex-row items-center justify-between gap-4">
-          <span className="text-xs text-[#8AB29E]">© {year} PawPrint. Built for pet parents everywhere.</span>
-          <div className="font-script text-xl text-white/85 flex items-center gap-1.5">
-            <span>Because they're family</span>
-            <span className="text-base">♡</span>
-          </div>
+        <div className="py-6 border-t border-white/10 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-emerald-100/60">
+          <span>© {year} PawPrint. Built for pet parents everywhere.</span>
+          <span className="font-script text-lg text-white/80 inline-flex items-center gap-1.5">Because they're family <Heart className="w-4 h-4 fill-rose-400 text-rose-400" /></span>
         </div>
       </div>
     </footer>

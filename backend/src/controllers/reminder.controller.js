@@ -45,7 +45,7 @@ const sendTest = asyncHandler(async (req, res) => {
     result = await runEmailReminders(String(req.userId), { includeEmpty: true });
   } catch (err) {
     console.error('[email-reminders] Test send failed:', err.message);
-    throw new ApiError(502, `Couldn't send the email — the mail server said: ${err.message}`);
+    throw new ApiError(502, "Couldn't send the email right now. Please try again in a few minutes.");
   }
   const { sent, simulated, previewUrl, reminderCount } = result;
 
@@ -62,8 +62,8 @@ const sendTest = asyncHandler(async (req, res) => {
       delivered: false,
       previewUrl: previewUrl || null,
       message: previewUrl
-        ? `Your digest (${what}) was created but not delivered, because email sending isn't set up on the server yet. Open the preview to see exactly what you'd receive.`
-        : `Your digest (${what}) was created but not delivered, because email sending isn't set up on the server yet.`,
+        ? `Your digest (${what}) is ready, but email delivery isn't switched on yet, so it wasn't sent. Open the preview to see exactly what you'd receive.`
+        : `Your digest (${what}) is ready, but email delivery isn't switched on yet, so it wasn't sent.`,
     });
   }
 

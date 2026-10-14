@@ -12,6 +12,7 @@ import {
 import { Link } from 'react-router-dom';
 import { useAppStore } from '../store/useAppStore';
 import { PawIcon } from '../components/common/OrganicDeco';
+import { PetAvatar, SectionHeader } from '../components/ui';
 import { formatMoney } from '../lib/money';
 import { todayKey } from '../lib/dates';
 
@@ -84,52 +85,41 @@ export const Analytics: React.FC = () => {
         : null;
 
   // Care score: simple heuristic (penalise overdue vaxes, reward records)
-  const careScore = Math.max(
+  // Clamped to 0–100 (the weigh-in bonus used to push it to 105)
+  const careScore = Math.min(100, Math.max(
     0,
-    100 - overdueVaxCount * 15 + (petWeights.length > 0 ? 5 : 0)
-  );
+    95 - overdueVaxCount * 15 + (petWeights.length > 0 ? 5 : 0)
+  ));
   const careLabel = careScore >= 90 ? 'Excellent wellness status' : careScore >= 70 ? 'Good — a few items need attention' : 'Needs care — please check overdue items';
 
   // Boarding eligibility: all vaccines up to date
   const boardingReady = overdueVaxCount === 0 && totalVaxCount > 0;
 
   return (
-    <div className="py-12 lg:py-24 transition-colors duration-200 relative overflow-hidden">
+    <div className="relative animate-fadeIn">
       <div className="absolute top-10 right-10 w-96 h-96 bg-[#E5EFE8] dark:bg-paw-darksurface/30 rounded-full blur-3xl -z-10 pointer-events-none" />
       <div className="absolute bottom-20 left-10 w-80 h-80 bg-[#DCEBE2]/40 dark:bg-paw-darkcard/20 organic-blob-1 blur-2xl -z-10 pointer-events-none" />
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-12">
+      <div className="space-y-10">
 
         {/* Header & Pet Switcher */}
-        <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 pb-6 border-b border-paw-soft-sage/40 dark:border-paw-darkborder/50">
-          <div className="space-y-2">
-            <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-[#E2EDE6] dark:bg-paw-darksurface border border-[#D0E2D5] dark:border-paw-darkborder text-xs font-bold uppercase tracking-wider text-paw-forest dark:text-paw-warm-sage">
-              <BarChart3 className="w-3.5 h-3.5" />
-              <span>Pet Health Analytics</span>
+        <SectionHeader icon={BarChart3} tone="teal" eyebrow="Health insights" title="Wellness at a glance"
+          description="Trends across your pets — immunisations, weight, visits and spending — in one view."
+          actions={pets.length > 1 ? (
+            <div className="segmented">
+              {pets.map((p) => (
+                <button key={p.id} onClick={() => setSelectedPetId(p.id)} aria-pressed={selectedPetId === p.id}
+                  className={`segmented-item inline-flex items-center gap-2 ${selectedPetId === p.id ? 'segmented-item-active' : ''}`}>
+                  <PetAvatar pet={p} className="w-5 h-5" />{p.name}
+                </button>
+              ))}
             </div>
-            <h1 className="text-3xl sm:text-4xl lg:text-5xl font-extrabold text-paw-dark dark:text-white tracking-tight font-sans">Wellness Dashboard</h1>
-            <p className="text-sm sm:text-base text-paw-secondary dark:text-paw-warm-sage/80 font-normal">
-              Aggregated insights across your family's pets, immunization timelines, and body condition scores.
-            </p>
-          </div>
-
-          {/* Pet Switcher */}
-          <div className="flex items-center gap-2 bg-[#FAFAF6] dark:bg-paw-darksurface p-1.5 rounded-full border border-paw-soft-sage/60 dark:border-paw-darkborder shadow-soft">
-            {pets.map((p) => (
-              <button key={p.id} onClick={() => setSelectedPetId(p.id)}
-                className={`flex items-center gap-2 px-4 py-2 rounded-full text-xs font-bold transition-all ${selectedPetId === p.id ? 'bg-paw-forest text-white shadow-soft' : 'text-paw-secondary dark:text-paw-warm-sage hover:text-paw-forest'}`}>
-                <img src={p.photo} alt={p.name} className="w-5 h-5 rounded-full object-cover"
-                  onError={(e) => { (e.target as HTMLImageElement).src = `https://api.dicebear.com/7.x/thumbs/svg?seed=${p.name}`; }} />
-                <span>{p.name}</span>
-              </button>
-            ))}
-          </div>
-        </div>
+          ) : undefined} />
 
         {/* Stat strip — one unified bar with divided segments, not four
            separate boxed cards, so it reads differently from the card-based
            sections below it rather than repeating the same shape again. */}
-        <div className="bg-[#FAFAF6] dark:bg-paw-darksurface rounded-[28px] border border-paw-soft-sage/70 dark:border-paw-darkborder shadow-soft p-6 sm:p-8">
+        <div className="card p-6 sm:p-8">
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-8 lg:divide-x divide-paw-soft-sage/50 dark:divide-paw-darkborder">
 
             <div className="flex items-center gap-3.5">
@@ -197,7 +187,7 @@ export const Analytics: React.FC = () => {
                     <h3 className="text-xl font-bold text-paw-dark dark:text-white">Weight History: {pet.name}</h3>
                   </div>
                   <p className="text-xs text-paw-secondary dark:text-paw-warm-sage mt-0.5">
-                    {petWeights.length} records · {pet.weight > 0 ? `Current: ${pet.weight} kg` : 'Log weight in Features to see trends'}
+                    {petWeights.length} records · {pet.weight > 0 ? `Current: ${pet.weight} kg` : 'Log a weigh-in to see trends'}
                   </p>
                 </div>
                 <div className="flex items-center gap-1 bg-white dark:bg-paw-darkcard p-1 rounded-full text-xs font-bold border border-paw-soft-sage/50">
@@ -252,7 +242,7 @@ export const Analytics: React.FC = () => {
                   <div className="h-48 flex items-center justify-center text-paw-secondary dark:text-paw-warm-sage/60 text-sm">
                     <div className="text-center">
                       <Scale className="w-8 h-8 mx-auto mb-2 opacity-40" />
-                      <p>Log at least 2 weight entries in Features to see the trend chart.</p>
+                      <p>Log at least 2 weigh-ins to see the trend chart.</p>
                     </div>
                   </div>
                 )}
@@ -274,7 +264,6 @@ export const Analytics: React.FC = () => {
                   ? `${((petWeights[petWeights.length - 1].weight - petWeights[0].weight) >= 0 ? '+' : '')}${(petWeights[petWeights.length - 1].weight - petWeights[0].weight).toFixed(1)} kg over ${petWeights.length} entries`
                   : 'Add weight records to see trend'}
               </span>
-              <span className="text-paw-secondary dark:text-paw-warm-sage">Recorded via home scale</span>
             </div>
           </div>
 
@@ -283,7 +272,7 @@ export const Analytics: React.FC = () => {
             <div>
               <div className="flex items-center gap-2 mb-4">
                 <ShieldCheck className="w-5 h-5 text-paw-forest dark:text-paw-sage" />
-                <h3 className="text-xl font-bold text-paw-dark dark:text-white">Immunization Matrix</h3>
+                <h3 className="text-xl font-bold text-paw-dark dark:text-white">Vaccination status</h3>
               </div>
               <div className="space-y-4">
                 <div className="p-4 rounded-2xl bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-900/40">

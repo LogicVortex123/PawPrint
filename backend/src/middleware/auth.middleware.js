@@ -11,14 +11,14 @@ const requireAuth = asyncHandler(async (req, res, next) => {
   const token = header.startsWith('Bearer ') ? header.slice(7) : null;
 
   if (!token) {
-    throw new ApiError(401, 'Authorization header is missing or malformed');
+    throw new ApiError(401, 'Please log in to continue.');
   }
 
   let payload;
   try {
     payload = jwt.verify(token, jwtSecret);
   } catch {
-    throw new ApiError(401, 'Token is invalid or has expired');
+    throw new ApiError(401, 'Your session has expired. Please log in again.');
   }
 
   // A valid token can outlive its account (deleted in Settings) — treat that as

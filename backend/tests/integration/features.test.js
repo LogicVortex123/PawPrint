@@ -37,7 +37,7 @@ describe('expenses', () => {
   });
 
   test('rejects bad amounts, dates and categories', async () => {
-    const bad = [{ amount: -1, date: '2026-01-01' }, { amount: 10, date: '01/02/2026' }, { amount: 'abc', date: '2026-01-01' }, { amount: 5, date: '2026-01-01', category: 'cars' }];
+    const bad = [{ amount: -1, date: '2026-01-01' }, { amount: 0, date: '2026-01-01' }, { amount: 0.001, date: '2026-01-01' }, { amount: 10, date: '01/02/2026' }, { amount: 'abc', date: '2026-01-01' }, { amount: 5, date: '2026-01-01', category: 'cars' }];
     for (const body of bad) expect((await owner.post(`/pets/${pet._id}/expenses`, body)).status).toBe(400);
   });
 

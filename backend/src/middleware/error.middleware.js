@@ -8,13 +8,15 @@ function toClientError(err) {
   }
   if (err.name === 'ValidationError') {
     const first = Object.values(err.errors || {})[0];
-    return new ApiError(400, first?.message || 'Some fields are invalid');
+    // Mongoose's built-in messages ("Path `x` is required.") name internal fields — keep only our own wording
+    const custom = first?.message && !/path `|^Cast to/i.test(first.message);
+    return new ApiError(400, custom ? first.message : 'Please check the details you entered and try again.');
   }
-  if (err.name === 'CastError') return new ApiError(400, `Invalid value for ${err.path}`);
+  if (err.name === 'CastError') return new ApiError(400, "That item couldn't be found. Please refresh and try again.");
   if (err.type === 'entity.parse.failed') return new ApiError(400, 'Request body is not valid JSON');
   if (err.type === 'entity.too.large') return new ApiError(413, 'Request body is too large');
   if (err.code === 11000) return new ApiError(409, 'That record already exists');
-  if (/^Origin .* not allowed$/.test(err.message || '')) return new ApiError(403, 'This website is not allowed to use the PawPrint API');
+  if (/^Origin .* not allowed$/.test(err.message || '')) return new ApiError(403, "This website can't connect to PawPrint.");
   return err;
 }
 

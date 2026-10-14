@@ -14,7 +14,10 @@ async function start() {
 
   server.on('error', (err) => {
     if (err.code === 'EADDRINUSE') {
-      console.error(`Port ${port} is already in use — is another copy of the backend running?`);
+      console.error(`Port ${port} is already in use — another copy of the backend is probably still running (check your other terminals).`);
+      console.error(process.platform === 'win32'
+        ? `  To stop it in PowerShell: Stop-Process -Id (Get-NetTCPConnection -LocalPort ${port} -State Listen).OwningProcess`
+        : `  To stop it: kill $(lsof -t -i:${port})`);
     } else {
       console.error('Server error:', err);
     }

@@ -1,241 +1,115 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { PhoneMockup } from './PhoneMockup';
-import { ArrowRight, ShieldCheck, Siren, Lock, FileDown } from 'lucide-react';
+import { ArrowRight, Syringe, Pill, Check, Sparkles, ShieldCheck, LayoutDashboard, Bell } from 'lucide-react';
+import { useAppStore } from '../../store/useAppStore';
+import { ProgressRing } from '../ui';
+
+const PET_FACES = ['/images/dog-portrait.webp', '/images/cat-peek.webp', '/images/corgi-puppy.webp', '/images/kitten-paw.webp'];
 
 export const HeroSection: React.FC = () => {
+  const { isAuthenticated } = useAppStore();
+
   return (
-    <section className="relative pt-6 pb-28 sm:pb-36 lg:pt-8 lg:pb-40 overflow-hidden transition-colors duration-200 bg-[#F9F9F4] dark:bg-paw-darkbg">
-      
-      {/* Giant Soft-Sage Circular Backdrop centered behind the phone */}
-      <div className="absolute right-[-6%] top-[2%] w-[640px] h-[640px] sm:w-[760px] sm:h-[760px] lg:w-[860px] lg:h-[860px] rounded-full bg-[#E3EFE7] dark:bg-paw-darksurface/40 -z-20 pointer-events-none" />
+    <section className="relative overflow-hidden -mt-[76px] pt-[76px]">
+      {/* Background */}
+      <div className="absolute inset-0 bg-gradient-to-b from-paw-light-sage via-paw-cream to-paw-cream dark:from-paw-darksurface dark:via-paw-darkbg dark:to-paw-darkbg" aria-hidden />
+      <div className="absolute inset-0 bg-paw-pattern [mask-image:radial-gradient(ellipse_at_top,black_30%,transparent_70%)]" aria-hidden />
+      <div className="absolute -top-20 -left-24 w-[28rem] h-[28rem] bg-emerald-200/50 dark:bg-emerald-500/10 blur-3xl animate-blob" aria-hidden />
+      <div className="absolute top-40 -right-24 w-[26rem] h-[26rem] bg-amber-100/70 dark:bg-amber-500/5 blur-3xl animate-blob" style={{ animationDelay: '-7s' }} aria-hidden />
 
-      {/* Layered Rolling Green Hills / Ground at the bottom of the hero */}
-      <div className="absolute left-0 right-0 bottom-0 h-48 sm:h-64 lg:h-76 pointer-events-none -z-10 overflow-hidden">
-        {/* Back soft sage hill ridge */}
-        <svg
-          viewBox="0 0 1440 280"
-          fill="none"
-          preserveAspectRatio="none"
-          className="absolute bottom-0 w-full h-full opacity-60 dark:opacity-30 text-[#8AB29E] dark:text-paw-darksurface"
-        >
-          <path
-            d="M0,200 C320,200 480,130 800,120 C1080,110 1280,150 1440,130 L1440,280 L0,280 Z"
-            fill="currentColor"
-          />
-        </svg>
+      <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-10 sm:pt-16 pb-20 lg:pb-28 grid lg:grid-cols-[1.05fr_1fr] gap-14 lg:gap-10 items-center">
+        {/* Copy */}
+        <div className="text-center lg:text-left stagger">
+          <span className="inline-flex items-center gap-2 pl-1.5 pr-4 py-1.5 rounded-full bg-white/80 dark:bg-paw-darkcard/80 backdrop-blur border border-paw-line dark:border-paw-darkborder shadow-2xs text-xs font-bold text-paw-dark dark:text-white">
+            <span className="px-2 py-0.5 rounded-full bg-paw-forest text-white text-[10px] uppercase tracking-wider">New</span>
+            Expenses, medications & smart reminders
+          </span>
 
-        {/* Front rolling deep forest green hill */}
-        <svg
-          viewBox="0 0 1440 280"
-          fill="none"
-          preserveAspectRatio="none"
-          className="absolute bottom-0 w-full h-full text-[#386754] dark:text-[#183F34]"
-        >
-          <path
-            d="M440,280 C580,200 720,140 960,130 C1200,120 1340,150 1440,165 L1440,280 L440,280 Z"
-            fill="currentColor"
-          />
-        </svg>
+          <h1 className="mt-6 font-display text-[2.75rem] leading-[1.05] sm:text-6xl lg:text-[4.25rem] font-semibold tracking-tight text-paw-dark dark:text-white">
+            Every wag, purr &amp; checkup —{' '}
+            <span className="relative inline-block">
+              <span className="text-gradient">beautifully organised.</span>
+              <svg className="absolute left-0 -bottom-2 w-full h-3 text-emerald-300 dark:text-emerald-600" viewBox="0 0 300 12" preserveAspectRatio="none" aria-hidden>
+                <path d="M2 9 C 80 2, 200 2, 298 8" stroke="currentColor" strokeWidth="4" fill="none" strokeLinecap="round" pathLength={1000} strokeDasharray="1000" style={{ animation: 'draw 1.4s 0.5s ease-out both' }} />
+              </svg>
+            </span>
+          </h1>
 
-        {/* Botanical leaf branches sprouting from the right slope of the green hill */}
-        <div className="absolute right-6 sm:right-14 lg:right-24 bottom-16 sm:bottom-20 hidden sm:block opacity-95">
-          <svg width="160" height="200" viewBox="0 0 160 200" fill="none">
-            {/* Main stem */}
-            <path d="M90 200 C90 145, 110 90, 150 35" stroke="#234D3C" strokeWidth="4" strokeLinecap="round" />
-            {/* Leaves */}
-            <path d="M100 155 C125 142, 138 152, 132 168 C125 178, 108 172, 100 155 Z" fill="#6F9F89" />
-            <path d="M106 122 C134 108, 146 118, 140 134 C132 144, 115 138, 106 122 Z" fill="#4E816E" />
-            <path d="M118 88 C145 74, 156 85, 151 102 C143 112, 126 104, 118 88 Z" fill="#6F9F89" />
-            <path d="M132 56 C154 42, 162 53, 156 67 C149 76, 137 70, 132 56 Z" fill="#4E816E" />
-            <path d="M145 32 C160 20, 166 28, 162 38 C155 45, 146 40, 145 32 Z" fill="#8AB29E" />
-          </svg>
-        </div>
+          <p className="mt-6 text-lg text-paw-secondary dark:text-paw-warm-sage/85 max-w-xl mx-auto lg:mx-0 leading-relaxed">
+            PawPrint keeps your dog's and cat's vaccines, daily doses, weight, vet visits, costs and documents in one calm place —
+            and nudges you before anything is due.
+          </p>
 
-        {/* Left side botanical sprout near center of hill */}
-        <div className="absolute left-[42%] bottom-12 hidden lg:block opacity-85">
-          <svg width="80" height="100" viewBox="0 0 80 100" fill="none">
-            <path d="M40 100 C40 68, 52 44, 68 18" stroke="#234D3C" strokeWidth="3" strokeLinecap="round" />
-            <path d="M43 72 C60 62, 70 67, 64 78 C58 85, 48 80, 43 72 Z" fill="#6F9F89" />
-            <path d="M50 48 C66 38, 74 43, 68 54 C62 62, 53 57, 50 48 Z" fill="#4E816E" />
-          </svg>
-        </div>
-      </div>
-
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 lg:gap-4 items-center">
-          
-          {/* Left Column: Heading, Pill, Description, Buttons, Social Proof */}
-          <div className="lg:col-span-6 space-y-6 text-left pt-4 relative">
-            {/* Subtle organic warmth behind heading */}
-            <div className="absolute -top-10 -left-10 w-96 h-96 bg-[#E8F2EC]/50 dark:bg-paw-darksurface/25 rounded-full blur-3xl -z-10 pointer-events-none" />
-            
-            {/* Pill badge */}
-            <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-[#E5EFE8] dark:bg-paw-darksurface border border-[#D0E2D5] dark:border-paw-darkborder text-xs font-bold text-[#245C4A] dark:text-paw-warm-sage shadow-2xs">
-              <ShieldCheck className="w-3.5 h-3.5 text-[#245C4A] dark:text-paw-sage stroke-[2.2]" />
-              <span>Organized · Secure · Always With You</span>
-            </div>
-
-            {/* Large Heading */}
-            <div className="space-y-1">
-              <h1 className="text-5xl sm:text-6xl xl:text-7xl font-extrabold tracking-tight text-[#243638] dark:text-white leading-[1.05] font-sans">
-                Because
-              </h1>
-              <div className="flex items-center gap-3">
-                <span className="font-script text-6xl sm:text-7xl xl:text-8xl font-bold text-[#245C4A] dark:text-paw-warm-sage inline-block py-1">
-                  they’re family
-                </span>
-                <span className="font-script text-5xl sm:text-6xl text-[#245C4A] dark:text-paw-warm-sage inline-block -mt-1 font-bold">
-                  ♡
-                </span>
-              </div>
-            </div>
-
-            {/* Supporting paragraph */}
-            <p className="text-base sm:text-lg text-[#526461] dark:text-paw-warm-sage/90 max-w-lg leading-relaxed font-normal">
-              PawPrint helps you keep track of your pet’s health, care and special moments — all in one place, ready whenever the vet asks.
-            </p>
-
-            {/* Action Buttons */}
-            <div className="flex flex-wrap items-center gap-4 pt-2">
-              <Link
-                to="/signup"
-                className="inline-flex items-center justify-center gap-2 px-8 py-3.5 rounded-full text-sm font-bold text-white bg-[#245C4A] hover:bg-[#183F34] shadow-soft hover:shadow-soft-lg transition-all duration-200"
-              >
-                <span>Get Started</span>
-                <ArrowRight className="w-4 h-4 stroke-[2.5]" />
+          <div className="mt-8 flex flex-col sm:flex-row items-center justify-center lg:justify-start gap-3">
+            {isAuthenticated ? (
+              <Link to="/features" className="btn-primary btn-lg group w-full sm:w-auto">
+                <LayoutDashboard className="w-5 h-5" /> Open your dashboard <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
               </Link>
-
-              <Link
-                to="/features"
-                className="inline-flex items-center justify-center px-8 py-3.5 rounded-full text-sm font-semibold text-[#243638] dark:text-paw-light-sage bg-white dark:bg-paw-darksurface border border-[#DCEBE2] dark:border-paw-darkborder hover:bg-[#EEF6F0] shadow-2xs transition-all duration-200"
-              >
-                Learn More
+            ) : (
+              <Link to="/signup" className="btn-primary btn-lg group w-full sm:w-auto">
+                Start free — it takes a minute <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
               </Link>
-            </div>
-
-            {/* Trust indicators — what the product actually does, not a made-up stat */}
-            <div className="pt-3 flex flex-wrap items-center gap-x-6 gap-y-2.5">
-              <div className="flex items-center gap-2 text-xs font-semibold text-[#526461] dark:text-paw-warm-sage/80">
-                <Siren className="w-4 h-4 text-[#245C4A] dark:text-paw-sage" />
-                <span>1-Tap Emergency Mode</span>
-              </div>
-              <div className="flex items-center gap-2 text-xs font-semibold text-[#526461] dark:text-paw-warm-sage/80">
-                <Lock className="w-4 h-4 text-[#245C4A] dark:text-paw-sage" />
-                <span>Secure &amp; Private</span>
-              </div>
-              <div className="flex items-center gap-2 text-xs font-semibold text-[#526461] dark:text-paw-warm-sage/80">
-                <FileDown className="w-4 h-4 text-[#245C4A] dark:text-paw-sage" />
-                <span>PDF Health Summary</span>
-              </div>
-            </div>
-
+            )}
+            <Link to="/#features" className="btn-secondary btn-lg w-full sm:w-auto">Explore features</Link>
           </div>
 
-          {/* Right Column: Visual Composition with Tilted Phone & Sitting Cat */}
-          <div className="lg:col-span-6 relative flex items-end justify-center pt-8 pb-2 min-h-[560px]">
-            
-            {/* LAYER 2A: Large Pale Sage-Green Circle behind the phone & cat */}
-            <div className="absolute top-1/2 left-1/2 -translate-x-[52%] -translate-y-[50%] w-[440px] h-[440px] sm:w-[540px] sm:h-[540px] rounded-full bg-[#D5E5DB] dark:bg-paw-darksurface/60 -z-30 pointer-events-none" />
-
-            {/* LAYER 2B: Second Overlapping Lighter Sage Organic Circle */}
-            <div className="absolute top-1/2 left-1/2 -translate-x-[32%] -translate-y-[64%] w-[320px] h-[320px] sm:w-[400px] sm:h-[400px] rounded-full bg-[#E5EFE8]/90 dark:bg-paw-darksurface/30 -z-40 pointer-events-none" />
-
-            {/* LAYER 3: Darker Forest/Sage Organic Hill Shape extending behind phone & cat */}
-            <div className="absolute left-[-8%] right-[-8%] bottom-0 h-44 sm:h-52 -z-20 pointer-events-none overflow-hidden">
-              {/* Back soft sage hill ridge */}
-              <svg viewBox="0 0 700 200" fill="none" preserveAspectRatio="none" className="absolute bottom-0 w-full h-full text-[#7EA995]/60 dark:text-paw-darksurface">
-                <path d="M0,150 C120,90 280,70 450,95 C560,110 640,80 700,90 L700,200 L0,200 Z" fill="currentColor" />
-              </svg>
-              {/* Front deep forest green hill */}
-              <svg viewBox="0 0 700 200" fill="none" preserveAspectRatio="none" className="absolute bottom-0 w-full h-full text-[#2D614E] dark:text-[#183F34]">
-                <path d="M40,200 C140,110 280,60 440,65 C540,70 620,110 700,130 L700,200 L40,200 Z" fill="currentColor" />
-              </svg>
+          <div className="mt-10 flex flex-col sm:flex-row items-center justify-center lg:justify-start gap-4">
+            <div className="flex -space-x-3">
+              {PET_FACES.map((src, i) => (
+                <img key={src} src={src} alt="" className="w-11 h-11 rounded-full object-cover ring-4 ring-paw-cream dark:ring-paw-darkbg shadow-soft" style={{ zIndex: 10 - i }} />
+              ))}
             </div>
-
-            {/* LAYER 4A: Botanical Leaf/Branch around the bottom-left of the phone */}
-            <div className="absolute left-[2%] sm:left-[8%] bottom-14 -z-10 pointer-events-none select-none">
-              <svg width="120" height="150" viewBox="0 0 120 150" fill="none">
-                {/* Stem curling up towards the phone */}
-                <path d="M70 145 C65 105, 45 75, 20 40" stroke="#234D3C" strokeWidth="3" strokeLinecap="round" />
-                {/* Leaves */}
-                <path d="M60 120 C36 112, 30 124, 38 135 C46 142, 58 132, 60 120 Z" fill="#588874" />
-                <path d="M52 95 C74 84, 82 95, 76 106 C70 114, 58 106, 52 95 Z" fill="#7EA995" />
-                <path d="M40 75 C18 68, 14 78, 20 88 C26 94, 38 86, 40 75 Z" fill="#588874" />
-                <path d="M30 52 C48 42, 54 52, 48 60 C42 66, 34 60, 30 52 Z" fill="#7EA995" />
-                <path d="M20 40 C14 26, 26 22, 32 30 C36 36, 28 42, 20 40 Z" fill="#588874" />
-              </svg>
-            </div>
-
-            {/* LAYER 4B: Additional Leaves near the right side of the cat */}
-            <div className="absolute right-[0%] sm:right-[4%] bottom-16 -z-10 pointer-events-none select-none">
-              <svg width="130" height="170" viewBox="0 0 130 170" fill="none">
-                {/* Main stem curving up right of cat */}
-                <path d="M40 165 C55 125, 75 80, 110 30" stroke="#234D3C" strokeWidth="3.5" strokeLinecap="round" />
-                {/* Paired leaves */}
-                <path d="M50 135 C74 125, 84 135, 78 148 C72 156, 58 148, 50 135 Z" fill="#588874" />
-                <path d="M58 108 C36 98, 30 110, 38 120 C46 128, 56 118, 58 108 Z" fill="#7EA995" />
-                <path d="M72 85 C96 74, 106 84, 100 96 C94 104, 80 96, 72 85 Z" fill="#588874" />
-                <path d="M82 62 C64 52, 58 64, 66 72 C72 80, 80 72, 82 62 Z" fill="#7EA995" />
-                <path d="M100 40 C118 28, 126 36, 122 46 C116 54, 106 48, 100 40 Z" fill="#588874" />
-                <path d="M110 30 C120 18, 128 24, 124 34 C118 40, 112 36, 110 30 Z" fill="#7EA995" />
-              </svg>
-            </div>
-
-            {/* LAYER 7A: Subtle Paw Print Watermark on the Hill */}
-            <div className="absolute right-[22%] bottom-6 z-10 opacity-20 pointer-events-none">
-              <svg viewBox="0 0 40 40" className="w-9 h-9 text-[#A8C5B3]" fill="currentColor">
-                <path d="M20 20 C16 20 13 23 13 27 C13 31 16 34 20 34 C24 34 27 31 27 27 C27 23 24 20 20 20 Z" />
-                <ellipse cx="12" cy="15" rx="3.2" ry="4.2" transform="rotate(-20 12 15)" />
-                <ellipse cx="17.5" cy="11.5" rx="3.2" ry="4.2" transform="rotate(-8 17.5 11.5)" />
-                <ellipse cx="23" cy="11.5" rx="3.2" ry="4.2" transform="rotate(8 23 11.5)" />
-                <ellipse cx="28" cy="15" rx="3.2" ry="4.2" transform="rotate(20 28 15)" />
-              </svg>
-            </div>
-
-            {/* LAYER 7B: Handwritten Script note above/right of phone with radiating dash lines */}
-            <div className="absolute -top-3 right-4 sm:right-12 z-20 text-center font-script text-[#245C4A] dark:text-paw-warm-sage pointer-events-none select-none">
-              <div className="relative inline-block">
-                {/* Radiating lines on the left */}
-                <div className="absolute -left-6 top-1 flex flex-col items-center opacity-70">
-                  <span className="text-xs transform -rotate-45 leading-none">―</span>
-                  <span className="text-xs transform rotate-12 leading-none mt-1">―</span>
-                </div>
-
-                <div className="text-2xl sm:text-3xl font-bold leading-tight">
-                  Healthy pets
-                </div>
-                <div className="text-xl sm:text-2xl font-bold -mt-1">
-                  Happier lives
-                </div>
-                <div className="text-2xl -mt-0.5 font-bold">♡</div>
+            <div className="text-sm text-paw-secondary dark:text-paw-warm-sage text-center sm:text-left">
+              <div className="font-bold text-paw-dark dark:text-white">Made for dogs, cats &amp; every pet in between</div>
+              <div className="flex items-center gap-3 justify-center sm:justify-start text-xs mt-0.5">
+                <span className="inline-flex items-center gap-1"><ShieldCheck className="w-3.5 h-3.5 text-paw-forest dark:text-paw-sage" /> Private by default</span>
+                <span className="inline-flex items-center gap-1"><Sparkles className="w-3.5 h-3.5 text-amber-500" /> Free to use</span>
               </div>
             </div>
+          </div>
+        </div>
 
-            {/* LAYER 7C: Floating Green Heart & Sparkle */}
-            <div className="absolute top-20 right-0 sm:right-6 z-20 text-[#6F9F89] text-base font-script animate-float-slow pointer-events-none">
-              ♥
-            </div>
-            <div className="absolute top-28 right-8 z-10 text-paw-honey text-xs font-script opacity-80 pointer-events-none">
-              ✦
-            </div>
-
-            {/* LAYER 5: Smartphone Mockup with exact tilt matching reference */}
-            <div className="relative z-20 transform -rotate-[5deg] sm:-rotate-[6.5deg] transition-transform duration-500 hover:rotate-0 drop-shadow-2xl">
-              <PhoneMockup />
-            </div>
-
-            {/* LAYER 6: Domestic Tabby Cat sitting upright right next to the phone */}
-            <div className="relative z-30 -ml-16 sm:-ml-20 mb-0 w-48 sm:w-56 md:w-64 flex-shrink-0 select-none pointer-events-none transform translate-y-2.5">
-              <img
-                src="/cat_sitting_clean.png"
-                alt="Friendly pet cat sitting"
-                className="w-full h-auto object-contain drop-shadow-xl"
-              />
-            </div>
-
+        {/* Visual */}
+        <div className="relative mx-auto w-full max-w-[34rem] aspect-[1/1.02]">
+          <div className="absolute inset-[6%] rounded-[42%_58%_55%_45%/48%_42%_58%_52%] bg-gradient-to-br from-emerald-300 via-emerald-200 to-amber-100 dark:from-emerald-700 dark:via-emerald-800 dark:to-amber-900/40 animate-blob opacity-90" aria-hidden />
+          <div className="absolute inset-[10%] rounded-[3rem] overflow-hidden shadow-soft-2xl rotate-[2deg] animate-scaleIn">
+            <img src="/images/hero-beagle.webp" alt="A happy beagle looking at the camera" className="w-full h-full object-cover scale-110" />
+          </div>
+          <div className="absolute -left-2 sm:left-0 bottom-[6%] w-[36%] aspect-square rounded-[2rem] overflow-hidden ring-8 ring-paw-cream dark:ring-paw-darkbg shadow-soft-xl rotate-[-6deg] animate-float-reverse">
+            <img src="/images/cat-tabby-blue.webp" alt="A curious tabby cat" className="w-full h-full object-cover" />
           </div>
 
+          {/* Floating cards */}
+          <div className="absolute -left-3 sm:-left-8 top-[12%] glass-card rounded-2xl p-3 pr-4 shadow-soft-xl border border-white/60 dark:border-paw-darkborder flex items-center gap-3 animate-float-slow">
+            <span className="w-10 h-10 rounded-xl bg-sky-100 text-sky-700 dark:bg-sky-500/20 dark:text-sky-300 flex items-center justify-center"><Syringe className="w-5 h-5" /></span>
+            <div>
+              <div className="text-xs font-extrabold text-paw-dark dark:text-white">Rabies booster</div>
+              <div className="text-[11px] font-semibold text-amber-600 dark:text-amber-400">Due in 5 days</div>
+            </div>
+          </div>
+
+          <div className="absolute -right-2 sm:-right-6 top-[30%] glass-card rounded-2xl p-3.5 shadow-soft-xl border border-white/60 dark:border-paw-darkborder w-40 animate-float-delayed">
+            <div className="text-[10px] font-extrabold uppercase tracking-wider text-paw-secondary dark:text-paw-warm-sage">Weight</div>
+            <div className="text-xl font-extrabold text-paw-dark dark:text-white">12.4 <span className="text-xs font-semibold">kg</span></div>
+            <svg viewBox="0 0 100 28" className="w-full h-7 mt-1" aria-hidden>
+              <path d="M2 24 C 18 22, 26 16, 40 17 S 62 9, 74 10 S 90 5, 98 4" fill="none" stroke="#F59E0B" strokeWidth="3" strokeLinecap="round" pathLength={1000} strokeDasharray="1000" style={{ animation: 'draw 1.8s 0.8s ease-out both' }} />
+            </svg>
+            <div className="text-[10px] font-bold text-emerald-700 dark:text-emerald-400">✓ In healthy range</div>
+          </div>
+
+          <div className="absolute right-[4%] bottom-[2%] glass-card rounded-2xl p-3 pr-4 shadow-soft-xl border border-white/60 dark:border-paw-darkborder flex items-center gap-3 animate-float-slow" style={{ animationDelay: '-2s' }}>
+            <span className="w-10 h-10 rounded-xl bg-violet-100 text-violet-700 dark:bg-violet-500/20 dark:text-violet-300 flex items-center justify-center"><Pill className="w-5 h-5" /></span>
+            <div>
+              <div className="text-xs font-extrabold text-paw-dark dark:text-white">Apoquel · 8:00 AM</div>
+              <div className="text-[11px] font-semibold text-emerald-600 dark:text-emerald-400 inline-flex items-center gap-1"><Check className="w-3 h-3" /> Given · 6-day streak</div>
+            </div>
+          </div>
+
+          <div className="hidden sm:flex absolute left-[30%] -top-2 glass-card rounded-full pl-2 pr-4 py-2 shadow-soft-lg border border-white/60 dark:border-paw-darkborder items-center gap-2 animate-float-reverse">
+            <ProgressRing value={92} size={30} stroke={4} className="stroke-emerald-500" />
+            <span className="text-xs font-extrabold text-paw-dark dark:text-white">Care score 92</span>
+            <Bell className="w-3.5 h-3.5 text-orange-500 animate-wiggle" />
+          </div>
         </div>
       </div>
     </section>

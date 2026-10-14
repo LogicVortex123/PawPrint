@@ -1,159 +1,105 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import {
-  PawPrint, Shield, TrendingUp, Calendar, MapPin, FileText, Clock, Siren,
-  Syringe, ArrowRight, ArrowUpRight,
+  Syringe, Pill, Scale, Calendar, Wallet, FileText, MapPin, Clock, Bell, Siren, Share2, ArrowUpRight, Check,
 } from 'lucide-react';
-import { PawIcon } from '../common/OrganicDeco';
+import { Reveal, IconTile } from '../ui';
+import { TONES, type Tone } from '../../lib/navigation';
 
-// Two tiers of visual weight instead of one repeated tile shape: a handful of
-// "headline" features get a bit more room, the rest sit as compact chips —
-// so the section reads as a hierarchy, not a checklist.
-const primaryFeatures = [
-  { title: 'Pet Profiles', desc: 'Multiple pets, all in one place — breed, allergies, medications and more.', icon: PawPrint },
-  { title: 'Vaccination Tracking', desc: 'Automatic Completed / Upcoming / Overdue status, never guessed.', icon: Shield },
-];
+const Tile: React.FC<{
+  icon: typeof Syringe; tone: Tone; title: string; text: string; className?: string; delay?: number; children?: React.ReactNode;
+}> = ({ icon, tone, title, text, className = '', delay = 0, children }) => (
+  <Reveal delay={delay} className={`group card card-interactive p-6 flex flex-col overflow-hidden relative ${className}`}>
+    <div className={`absolute -right-12 -top-12 w-40 h-40 rounded-full ${TONES[tone].soft} opacity-0 group-hover:opacity-100 transition-opacity duration-500`} aria-hidden />
+    <div className="relative flex items-start justify-between">
+      <IconTile icon={icon} tone={tone} className="group-hover:scale-110 group-hover:rotate-[-6deg] transition-transform duration-300" />
+      <ArrowUpRight className="w-5 h-5 text-paw-secondary/40 group-hover:text-paw-forest dark:group-hover:text-paw-sage group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-all" />
+    </div>
+    <h3 className="relative mt-5 text-lg font-extrabold text-paw-dark dark:text-white">{title}</h3>
+    <p className="relative mt-1.5 text-sm text-paw-secondary dark:text-paw-warm-sage leading-relaxed">{text}</p>
+    {children && <div className="relative mt-5 flex-1 flex items-end">{children}</div>}
+  </Reveal>
+);
 
-const compactFeatures = [
-  { title: 'Weight Tracking', desc: 'Spot trends early', icon: TrendingUp },
-  { title: 'Vet Appointments', desc: 'Book & manage', icon: Calendar },
-  { title: 'Nearby Clinics', desc: 'Ranked by distance', icon: MapPin },
-  { title: 'Medical Documents', desc: 'Stored, always on hand', icon: FileText },
-  { title: 'Emergency Mode', desc: 'Key info in one tap', icon: Siren },
-];
+export const FeaturesGrid: React.FC = () => (
+  <section id="features" className="relative py-24 scroll-mt-20">
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <Reveal className="text-center max-w-2xl mx-auto">
+        <span className="eyebrow text-paw-forest dark:text-paw-sage">Everything in one place</span>
+        <h2 className="mt-3 font-display text-4xl sm:text-5xl font-semibold tracking-tight text-paw-dark dark:text-white">Ten tools. One happy, healthy pet.</h2>
+        <p className="mt-4 text-lg text-paw-secondary dark:text-paw-warm-sage">From the first puppy shots to senior-year check-ups — every record, reminder and receipt lives together.</p>
+      </Reveal>
 
-export const FeaturesGrid: React.FC = () => {
-  return (
-    <section className="py-20 lg:py-28 bg-[#F9F9F4] dark:bg-paw-darkbg transition-colors duration-200 relative overflow-hidden">
-      <div className="absolute top-10 left-5 w-96 h-96 bg-[#E5EFE8]/60 dark:bg-paw-darksurface/30 rounded-full blur-3xl -z-10 pointer-events-none" />
-      <div className="absolute bottom-10 right-5 w-80 h-80 bg-[#DCEBE2]/45 dark:bg-paw-darkcard/20 rounded-full blur-2xl -z-10 pointer-events-none" />
-
-      <div className="absolute right-0 top-1/3 translate-x-4 opacity-35 dark:opacity-20 pointer-events-none hidden lg:block">
-        <svg width="70" height="120" viewBox="0 0 70 120" fill="none">
-          <path d="M60 115 C55 80, 45 45, 15 15" stroke="#4E816E" strokeWidth="2.5" strokeLinecap="round" />
-          <path d="M50 90 C32 82, 28 92, 34 100 C40 106, 48 98, 50 90 Z" fill="#6F9F89" />
-          <path d="M42 65 C60 55, 68 64, 62 72 C56 78, 48 72, 42 65 Z" fill="#4E816E" />
-          <path d="M30 45 C15 36, 12 46, 18 54 C24 60, 30 52, 30 45 Z" fill="#6F9F89" />
-          <path d="M15 15 C22 6, 30 12, 26 20 C22 24, 16 20, 15 15 Z" fill="#4E816E" />
-        </svg>
-      </div>
-
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
-
-        {/* Section intro */}
-        <div className="max-w-2xl mb-14 relative">
-          <div className="absolute -top-6 -left-4 opacity-10 pointer-events-none">
-            <svg viewBox="0 0 40 40" className="w-28 h-28 text-[#245C4A]" fill="currentColor">
-              <path d="M20 20 C16 20 13 23 13 27 C13 31 16 34 20 34 C24 34 27 31 27 27 C27 23 24 20 20 20 Z" />
-              <ellipse cx="12" cy="15" rx="3.2" ry="4.2" transform="rotate(-20 12 15)" />
-              <ellipse cx="17.5" cy="11.5" rx="3.2" ry="4.2" transform="rotate(-8 17.5 11.5)" />
-              <ellipse cx="23" cy="11.5" rx="3.2" ry="4.2" transform="rotate(8 23 11.5)" />
-              <ellipse cx="28" cy="15" rx="3.2" ry="4.2" transform="rotate(20 28 15)" />
-            </svg>
-          </div>
-          <div className="w-14 h-14 rounded-2xl bg-[#E0EDE4] dark:bg-paw-darksurface text-[#245C4A] dark:text-paw-sage flex items-center justify-center shadow-2xs mb-6 relative z-10">
-            <PawIcon className="w-7 h-7" />
-          </div>
-          <h2 className="text-3xl sm:text-4xl font-extrabold text-[#243638] dark:text-white tracking-tight leading-snug font-sans relative z-10">
-            Everything They Need,<br />All in One Place
-          </h2>
-          <p className="text-sm sm:text-base text-[#526461] dark:text-paw-warm-sage/80 leading-relaxed font-normal max-w-md mt-4 relative z-10">
-            From daily care to long-term health, PawPrint gives you the tools to be a more informed, prepared and loving pet parent.
-          </p>
-        </div>
-
-        {/* Bento layout: a real timeline preview as the anchor tile, two headline
-           features beside it, then compact chips for the rest — not one grid
-           of identical boxes. */}
-        <div className="grid grid-cols-1 lg:grid-cols-6 gap-4">
-
-          {/* Anchor tile — Health Timeline, shown as an actual mini product preview */}
-          <div className="lg:col-span-3 lg:row-span-2 bg-white dark:bg-paw-darkcard rounded-[28px] border border-[#DCEBE2] dark:border-paw-darkborder shadow-soft p-6 sm:p-7 flex flex-col">
-            <div className="flex items-center justify-between mb-5">
-              <div className="flex items-center gap-2.5">
-                <div className="w-9 h-9 rounded-xl bg-[#E0EDE4] dark:bg-paw-darksurface text-[#245C4A] dark:text-paw-sage flex items-center justify-center">
-                  <Clock className="w-[18px] h-[18px]" />
-                </div>
-                <span className="text-sm font-extrabold text-[#243638] dark:text-white">Health Timeline</span>
-              </div>
-              <Link to="/features" className="text-xs font-semibold text-[#245C4A] dark:text-paw-warm-sage hover:underline inline-flex items-center gap-1">
-                View All <ArrowUpRight className="w-3 h-3" />
-              </Link>
+      <div className="mt-14 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 lg:gap-5 auto-rows-[minmax(0,auto)]">
+        {/* Large: vaccinations with photo */}
+        <Reveal className="group card card-interactive overflow-hidden sm:col-span-2 lg:row-span-2 flex flex-col">
+          <div className="relative h-56 lg:h-72 overflow-hidden">
+            <img src="/images/vet-care.webp" alt="A vet gently checking a cat" loading="lazy" className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700" />
+            <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-black/0" />
+            <div className="absolute left-4 bottom-4 right-4 flex flex-wrap gap-2">
+              {[['Rabies', 'Up to date', 'bg-emerald-500'], ['DHPP', 'Due in 12 days', 'bg-amber-500'], ['Lepto', '6 days overdue', 'bg-rose-500']].map(([n, s, c]) => (
+                <span key={n} className="glass-card rounded-full pl-2 pr-3 py-1 text-[11px] font-bold text-paw-dark dark:text-white inline-flex items-center gap-1.5"><span className={`w-2 h-2 rounded-full ${c}`} />{n} · {s}</span>
+              ))}
             </div>
-
-            <div className="space-y-4 flex-1">
-              {[
-                { icon: Syringe, label: 'Vaccination', detail: 'Rabies booster administered', tag: 'Upcoming', tagCls: 'bg-[#FEF3C7] text-[#92400E]' },
-                { icon: TrendingUp, label: 'Weight Record', detail: '28.5 kg logged', tag: 'Completed', tagCls: 'bg-[#DEF7EC] text-[#03543F]' },
-                { icon: Calendar, label: 'Appointment', detail: 'Annual checkup booked', tag: 'Completed', tagCls: 'bg-[#DEF7EC] text-[#03543F]' },
-                { icon: FileText, label: 'Document', detail: 'Prescription uploaded', tag: 'Stored', tagCls: 'bg-[#E0EDE4] text-[#245C4A]' },
-              ].map((row, i) => {
-                const RowIcon = row.icon;
-                return (
-                  <div key={i} className="flex items-center gap-3">
-                    <div className="w-8 h-8 rounded-full bg-[#F4F8F5] dark:bg-paw-darksurface text-[#245C4A] dark:text-paw-warm-sage flex items-center justify-center flex-shrink-0">
-                      <RowIcon className="w-4 h-4" />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="text-xs font-bold text-[#243638] dark:text-white">{row.label}</div>
-                      <div className="text-[11px] text-[#526461] dark:text-paw-warm-sage/70 truncate">{row.detail}</div>
-                    </div>
-                    <span className={`px-2 py-0.5 rounded-full text-[9px] font-extrabold whitespace-nowrap ${row.tagCls}`}>{row.tag}</span>
-                  </div>
-                );
-              })}
-            </div>
-
-            <p className="text-[11px] text-[#526461] dark:text-paw-warm-sage/60 mt-5 pt-4 border-t border-[#EEF6F0] dark:border-paw-darkborder">
-              Every vaccination, weigh-in, appointment and document — merged into one chronological view.
+          </div>
+          <div className="p-6">
+            <IconTile icon={Syringe} tone="sky" />
+            <h3 className="mt-4 text-xl font-extrabold text-paw-dark dark:text-white">Vaccinations that never slip</h3>
+            <p className="mt-1.5 text-sm text-paw-secondary dark:text-paw-warm-sage leading-relaxed">
+              Pick a vaccine and PawPrint fills in the usual booster interval for dogs or cats. You'll see what's up to date, due soon or overdue at a glance — and get reminded ahead of time.
             </p>
           </div>
+        </Reveal>
 
-          {/* Two headline features, stacked beside the anchor tile */}
-          {primaryFeatures.map((item, idx) => {
-            const Icon = item.icon;
-            return (
-              <div key={idx} className="lg:col-span-3 bg-white dark:bg-paw-darkcard rounded-[24px] border border-[#DCEBE2] dark:border-paw-darkborder shadow-soft p-6 flex items-start gap-4 group hover:shadow-soft-lg transition-shadow">
-                <div className="w-12 h-12 rounded-xl bg-[#E0EDE4] dark:bg-paw-darksurface text-[#245C4A] dark:text-paw-sage flex items-center justify-center flex-shrink-0 group-hover:scale-105 transition-transform">
-                  <Icon className="w-6 h-6 stroke-[1.8]" />
-                </div>
-                <div>
-                  <h3 className="text-base font-bold text-[#243638] dark:text-white mb-1">{item.title}</h3>
-                  <p className="text-xs text-[#526461] dark:text-paw-warm-sage/80 leading-relaxed">{item.desc}</p>
-                </div>
-              </div>
-            );
-          })}
-
-          {/* Compact chips for the remaining features */}
-          <div className="lg:col-span-6 grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
-            {compactFeatures.map((item, idx) => {
-              const Icon = item.icon;
-              return (
-                <div key={idx} className="bg-white dark:bg-paw-darkcard rounded-2xl border border-[#DCEBE2] dark:border-paw-darkborder p-4 flex flex-col gap-2.5 group hover:shadow-soft transition-shadow">
-                  <div className="w-9 h-9 rounded-lg bg-[#E0EDE4] dark:bg-paw-darksurface text-[#245C4A] dark:text-paw-sage flex items-center justify-center group-hover:scale-105 transition-transform">
-                    <Icon className="w-[18px] h-[18px] stroke-[1.8]" />
-                  </div>
-                  <div>
-                    <h3 className="text-xs font-bold text-[#243638] dark:text-white">{item.title}</h3>
-                    <p className="text-[11px] text-[#526461] dark:text-paw-warm-sage/70 leading-snug mt-0.5">{item.desc}</p>
-                  </div>
-                </div>
-              );
-            })}
+        <Tile icon={Pill} tone="violet" title="Daily medications" text="A tick-box for every dose, streaks, and on-time rates for the last 7 and 30 days." delay={60}>
+          <div className="w-full flex gap-2">
+            {['Morning', 'Evening'].map((l, i) => (
+              <span key={l} className={`flex-1 inline-flex items-center justify-center gap-1 py-2 rounded-full text-xs font-bold ${i === 0 ? 'bg-emerald-600 text-white' : 'border border-paw-line dark:border-paw-darkborder text-paw-dark dark:text-white'}`}>
+                {i === 0 ? <Check className="w-3.5 h-3.5" /> : <span className="w-3 h-3 rounded-full border-2 border-current opacity-50" />}{l}
+              </span>
+            ))}
           </div>
-        </div>
+        </Tile>
 
-        <div className="mt-10 flex items-center gap-3">
-          <span className="font-script text-2xl text-[#245C4A] dark:text-paw-warm-sage font-bold">Simple. Smart. Complete.</span>
-          <Link
-            to="/features"
-            className="inline-flex items-center gap-1.5 text-sm font-bold text-[#245C4A] dark:text-paw-warm-sage hover:underline"
-          >
-            Explore All Features <ArrowRight className="w-4 h-4" />
-          </Link>
-        </div>
+        <Tile icon={Scale} tone="amber" title="Weight trends" text="A chart with your vet's healthy range, so gradual changes don't sneak up on you." delay={120}>
+          <svg viewBox="0 0 200 50" className="w-full h-12" aria-hidden>
+            <rect x="0" y="12" width="200" height="22" rx="6" className="fill-emerald-500/10" />
+            <path d="M4 40 C 30 36, 50 30, 70 31 S 110 22, 130 23 S 170 15, 196 13" fill="none" stroke="#F59E0B" strokeWidth="3.5" strokeLinecap="round" />
+          </svg>
+        </Tile>
+
+        <Tile icon={Wallet} tone="rose" title="Expense insights" text="Vet bills, food and grooming by month and category. Export to a spreadsheet anytime." delay={60}>
+          <div className="w-full flex items-end gap-1.5 h-12">
+            {[30, 55, 40, 70, 45, 85, 60].map((h, i) => (
+              <span key={i} className={`flex-1 rounded-t-md ${i === 5 ? 'bg-rose-500' : 'bg-rose-200 dark:bg-rose-500/30'}`} style={{ height: `${h}%` }} />
+            ))}
+          </div>
+        </Tile>
+
+        <Tile icon={Bell} tone="orange" title="Smart reminders" text="Boosters, visits to confirm, doses still due and weigh-in nudges — in the app, by email or as browser alerts." delay={120} />
+
+        <Tile icon={Calendar} tone="teal" title="Vet appointments" text="Book visits, add them to your calendar, then log what each one cost." delay={0} />
+        <Tile icon={FileText} tone="indigo" title="Medical vault" text="Lab reports, prescriptions and insurance — PDFs or photos, always on hand." delay={60} />
+        <Tile icon={MapPin} tone="lime" title="Nearby clinics" text="Vets ranked by distance, 24/7 emergency care flagged. Save the ones you trust." delay={120} />
+        <Tile icon={Clock} tone="slate" title="Health timeline" text="Their whole story in order: every shot, weigh-in, visit and document." delay={180} />
+
+        <Reveal className="sm:col-span-2 relative overflow-hidden rounded-3xl p-6 sm:p-8 bg-gradient-to-br from-rose-600 to-red-500 text-white shadow-soft-lg group">
+          <div className="absolute -right-10 -bottom-16 w-56 h-56 rounded-full bg-white/10" aria-hidden />
+          <span className="w-11 h-11 rounded-2xl bg-white/15 flex items-center justify-center"><Siren className="w-5 h-5 group-hover:animate-wiggle" /></span>
+          <h3 className="mt-4 text-xl font-extrabold">Emergency Mode</h3>
+          <p className="mt-1.5 text-sm text-white/85 max-w-md">One tap shows allergies, medications, microchip and who to call — big and readable when your hands are shaking.</p>
+        </Reveal>
+        <Reveal delay={80} className="sm:col-span-2 relative overflow-hidden rounded-3xl p-6 sm:p-8 bg-gradient-to-br from-paw-forest to-paw-deep text-white shadow-soft-lg">
+          <div className="absolute -right-10 -bottom-16 w-56 h-56 rounded-full bg-white/10" aria-hidden />
+          <span className="w-11 h-11 rounded-2xl bg-white/15 flex items-center justify-center"><Share2 className="w-5 h-5" /></span>
+          <h3 className="mt-4 text-xl font-extrabold">Share with your vet or sitter</h3>
+          <p className="mt-1.5 text-sm text-white/85 max-w-md">Create a read-only link that expires on its own, or print a tidy PDF health summary before the visit.</p>
+        </Reveal>
       </div>
-    </section>
-  );
-};
+
+      <Reveal className="mt-10 text-center">
+        <Link to="/signup" className="btn-secondary btn-lg">Try every feature free <ArrowUpRight className="w-4 h-4" /></Link>
+      </Reveal>
+    </div>
+  </section>
+);

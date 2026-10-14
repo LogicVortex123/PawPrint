@@ -6,6 +6,12 @@
 import { fileUrl } from './api';
 import { Pet, Vaccination, VaccinationStatus, WeightRecord, Appointment, MedicalDocument, Clinic, Medication, Expense, ExpenseCategory } from '../types';
 
+// Friendly stock photo until the owner uploads their own
+const defaultPetPhoto = (species?: string) => {
+  const s = species?.toLowerCase();
+  return s === 'cat' ? '/images/cat-peek.webp' : s === 'dog' ? '/images/dog-portrait.webp' : '/images/cat-dog-cuddle.webp';
+};
+
 // ── Pet ──────────────────────────────────────────────────────────────────────
 
 type BackendPet = {
@@ -57,7 +63,7 @@ export function mapBackendPet(bp: BackendPet): Pet {
     weight: 0,
     targetWeightMinKg: bp.targetWeightMinKg ?? null,
     targetWeightMaxKg: bp.targetWeightMaxKg ?? null,
-    photo: fileUrl(bp.photoUrl) || (bp.species?.toLowerCase() === 'cat' ? '/cat.jpg' : '/dog.jpg'),
+    photo: fileUrl(bp.photoUrl) || defaultPetPhoto(bp.species),
     hasCustomPhoto: !!bp.photoUrl,
     allergies: bp.allergies?.filter(Boolean) ?? [],
     medications: bp.medications?.filter(Boolean) ?? [],

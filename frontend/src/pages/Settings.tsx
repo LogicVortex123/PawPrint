@@ -1,6 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { User, Lock, Palette, Bell, AlertTriangle, Sun, Moon, Monitor, Mail, Send, ExternalLink, Info, Download, Loader2 } from 'lucide-react';
+import { Settings as SettingsIcon } from 'lucide-react';
+import { SectionHeader } from '../components/ui';
 import { useAppStore } from '../store/useAppStore';
 import { inputCls, labelCls, primaryBtnCls } from '../components/common/Modal';
 import { apiRequest } from '../lib/api';
@@ -8,7 +10,7 @@ import { CURRENCY_OPTIONS } from '../lib/money';
 import { DEFAULT_PREFERENCES, ThemePreference, UserPreferences } from '../types';
 import { NotificationToggle } from '../components/common/NotificationToggle';
 
-const card = 'bg-[#FAFAF6] dark:bg-paw-darksurface rounded-3xl p-6 sm:p-8 border border-paw-soft-sage/70 dark:border-paw-darkborder shadow-soft';
+const card = 'card p-6 sm:p-8';
 const heading = 'flex items-center gap-2 text-lg font-extrabold text-paw-dark dark:text-white mb-1';
 const sub = 'text-sm text-paw-secondary dark:text-paw-warm-sage/80 mb-5';
 const errText = (err: unknown, fallback: string) => `❌ ${err instanceof Error ? err.message : fallback}`;
@@ -142,12 +144,10 @@ export const Settings: React.FC = () => {
   ];
 
   return (
-    <div className="py-12 lg:py-16 px-4">
-      <div className="max-w-2xl mx-auto space-y-6">
-        <div>
-          <h1 className="text-3xl sm:text-4xl font-extrabold text-paw-dark dark:text-white">Account Settings</h1>
-          <p className="text-paw-secondary dark:text-paw-warm-sage/80 mt-1">Manage your profile, sign-in, appearance and reminders.</p>
-        </div>
+    <div className="animate-fadeIn">
+      <div className="max-w-3xl space-y-6">
+        <SectionHeader icon={SettingsIcon} tone="slate" eyebrow="Account" title="Settings"
+          description="Your profile, sign-in, appearance, reminders and data." />
 
         {/* Profile */}
         <section className={card}>
@@ -263,7 +263,7 @@ export const Settings: React.FC = () => {
                   {smtpConfigured === false && (
                     <div className="flex items-start gap-2 p-3 rounded-xl bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-900/40 text-xs text-amber-800 dark:text-amber-300">
                       <Info className="w-4 h-4 flex-shrink-0 mt-px" />
-                      <span>Email sending isn't set up on the server yet, so emails can't reach your inbox. You can still send a test to preview exactly what you'd receive.</span>
+                      <span>Email delivery isn't switched on yet, so reminder emails won't reach your inbox for now. You can still send a test to preview exactly what you'd receive.</span>
                     </div>
                   )}
                   <div className="flex flex-wrap items-center gap-3">

@@ -11,12 +11,12 @@ async function verifyGoogleToken(idToken) {
   try {
     ticket = await client.verifyIdToken({ idToken, audience: googleClientId });
   } catch (err) {
-    throw new ApiError(401, 'Invalid Google ID token');
+    throw new ApiError(401, "Google sign-in didn't work. Please try again.");
   }
 
   const payload = ticket.getPayload();
   if (!payload?.email) {
-    throw new ApiError(401, 'Google token did not include an email address');
+    throw new ApiError(401, "We couldn't get an email address from your Google account.");
   }
 
   return { googleId: payload.sub, email: payload.email, name: payload.name || payload.email };

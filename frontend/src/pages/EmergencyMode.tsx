@@ -60,7 +60,7 @@ export const EmergencyMode: React.FC = () => {
     <div className="min-h-[80vh] bg-rose-50 dark:bg-[#1c0f12] py-6 sm:py-10 px-4">
       <div className="max-w-3xl mx-auto space-y-5">
         <div className="flex items-center justify-between gap-3">
-          <Link to={`/features?pet=${pet.id}`} className="inline-flex items-center gap-1.5 text-sm font-bold text-rose-800 dark:text-rose-300 hover:underline">
+          <Link to={`/features?pet=${pet.id}&tab=pet-profiles`} className="inline-flex items-center gap-1.5 text-sm font-bold text-rose-800 dark:text-rose-300 hover:underline">
             <ArrowLeft className="w-4 h-4" /> Back to dashboard
           </Link>
           <span className="px-3 py-1 rounded-full bg-rose-600 text-white text-xs font-extrabold uppercase tracking-wider">🚨 Emergency Mode</span>
@@ -119,7 +119,7 @@ export const EmergencyMode: React.FC = () => {
               )}
             </div>
           )) : (
-            <p className="text-base text-gray-600 dark:text-gray-400">No emergency contact saved. <Link to={`/features?pet=${pet.id}`} className="font-bold text-rose-700 underline">Add one</Link> so it's here when you need it.</p>
+            <p className="text-base text-gray-600 dark:text-gray-400">No emergency contact saved. <Link to={`/features?pet=${pet.id}&tab=pet-profiles`} className="font-bold text-rose-700 underline">Add one</Link> so it's here when you need it.</p>
           )}
         </section>
 

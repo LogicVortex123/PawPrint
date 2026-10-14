@@ -6,16 +6,24 @@ import { Modal, inputCls, labelCls, primaryBtnCls, dangerBtnCls } from '../commo
 import { Expense, ExpenseCategory, ExpenseInput, ExpenseSummary, Pet, DEFAULT_PREFERENCES } from '../../types';
 import { EXPENSE_CATEGORIES, categoryInfo, formatMoney } from '../../lib/money';
 import { todayKey, formatDateKey } from '../../lib/dates';
+import { EmptyState, SectionHeader, Segmented } from '../ui';
 
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 
+// Bar colour per category in the breakdown
+const CATEGORY_BAR: Partial<Record<ExpenseCategory, string>> = {
+  vet: 'bg-teal-500', medication: 'bg-violet-500', food: 'bg-amber-500', grooming: 'bg-pink-500', insurance: 'bg-sky-500',
+  supplies: 'bg-lime-500', training: 'bg-indigo-500', boarding: 'bg-orange-500', other: 'bg-slate-400',
+};
+
 // ── Add / edit form ──────────────────────────────────────────────────────────
 
-export type ExpensePrefill = Partial<ExpenseInput>;
+export type ExpensePrefill = Partial<ExpenseInput> & { petId?: string };
 
 export const ExpenseFormModal: React.FC<{ pet: Pet; expense?: Expense; prefill?: ExpensePrefill; onClose: () => void }> = ({ pet, expense, prefill, onClose }) => {
-  const { addExpense, updateExpense, deleteExpense, showToast, user } = useAppStore();
+  const { addExpense, updateExpense, deleteExpense, showToast, user, pets } = useAppStore();
   const currency = user?.preferences?.currency ?? DEFAULT_PREFERENCES.currency;
+  const [targetPetId, setTargetPetId] = useState<string>(expense?.petId ?? prefill?.petId ?? pet.id);
   const [amount, setAmount] = useState(expense ? String(expense.amount) : prefill?.amount ? String(prefill.amount) : '');
   const [category, setCategory] = useState<ExpenseCategory>(expense?.category ?? prefill?.category ?? 'food');
   const [date, setDate] = useState(expense?.date ?? prefill?.date ?? todayKey());
@@ -24,15 +32,17 @@ export const ExpenseFormModal: React.FC<{ pet: Pet; expense?: Expense; prefill?:
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
 
+  const targetPet = pets.find((p) => p.id === targetPetId) || pet;
+
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
     const value = Number(amount);
-    if (!amount || !Number.isFinite(value) || value < 0) { showToast('⚠️ Enter the amount spent.'); return; }
+    if (!amount || !Number.isFinite(value) || value <= 0) { showToast('⚠️ Enter an amount greater than zero.'); return; }
     setSaving(true);
     try {
       const input: ExpenseInput = { amount: value, category, date, description: description.trim(), vendor: vendor.trim() };
-      if (expense) await updateExpense(expense.id, input);
-      else await addExpense(pet.id, { ...input, appointment: prefill?.appointment ?? undefined });
+      if (expense) await updateExpense(expense.id, { ...input, pet: targetPetId });
+      else await addExpense(targetPetId, { ...input, appointment: prefill?.appointment ?? undefined });
       onClose();
     } catch (err) {
       showToast(`❌ ${err instanceof Error ? err.message : 'Could not save the expense.'}`);
@@ -52,8 +62,24 @@ export const ExpenseFormModal: React.FC<{ pet: Pet; expense?: Expense; prefill?:
   };
 
   return (
-    <Modal title={expense ? 'Edit expense' : `New expense for ${pet.name}`} onClose={onClose}>
+    <Modal title={expense ? 'Edit expense' : 'Add an expense'} subtitle={expense ? undefined : `For ${targetPet.name}`} icon={Wallet} tone="rose" onClose={onClose}>
       <form onSubmit={submit} className="space-y-4">
+        {pets.length > 1 && (
+          <div>
+            <label className={labelCls}>Pet *</label>
+            <select
+              value={targetPetId}
+              onChange={(e) => setTargetPetId(e.target.value)}
+              className={inputCls}
+            >
+              {pets.map((p) => (
+                <option key={p.id} value={p.id}>
+                  {p.species === 'dog' ? '🐶' : p.species === 'cat' ? '🐱' : '🐾'} {p.name}
+                </option>
+              ))}
+            </select>
+          </div>
+        )}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <div>
             <label className={labelCls}>Amount ({currency}) *</label>
@@ -70,9 +96,9 @@ export const ExpenseFormModal: React.FC<{ pet: Pet; expense?: Expense; prefill?:
           <div className="grid grid-cols-3 gap-2">
             {EXPENSE_CATEGORIES.map((c) => (
               <button key={c.value} type="button" onClick={() => setCategory(c.value)} aria-pressed={category === c.value}
-                className={`px-2 py-2 rounded-xl text-xs font-bold border transition-colors ${category === c.value
-                  ? 'bg-paw-forest text-white border-paw-forest'
-                  : 'bg-paw-cream dark:bg-paw-darkcard text-paw-dark dark:text-white border-paw-soft-sage dark:border-paw-darkborder hover:border-paw-forest'}`}>
+                className={`px-2 py-2.5 rounded-2xl text-xs font-bold border transition-all ${category === c.value
+                  ? 'bg-paw-forest text-white border-paw-forest shadow-soft scale-[1.02]'
+                  : 'bg-white dark:bg-paw-darkcard text-paw-dark dark:text-white border-paw-line dark:border-paw-darkborder hover:border-paw-forest'}`}>
                 <span aria-hidden>{c.emoji}</span> {c.label}
               </button>
             ))}
@@ -94,7 +120,7 @@ export const ExpenseFormModal: React.FC<{ pet: Pet; expense?: Expense; prefill?:
               <Trash2 className="w-3.5 h-3.5" /><span>{deleting ? 'Deleting…' : 'Delete'}</span>
             </button>
           ) : <span />}
-          <button type="submit" disabled={saving} className={primaryBtnCls}>{saving ? 'Saving…' : expense ? 'Save changes' : 'Add expense'}</button>
+          <button type="submit" disabled={saving} className={primaryBtnCls}>{saving ? <><Loader2 className="w-4 h-4 animate-spin" /> Saving…</> : expense ? 'Save changes' : 'Add expense'}</button>
         </div>
       </form>
     </Modal>
@@ -133,7 +159,7 @@ const MonthlyChart: React.FC<{ byMonth: number[]; currency: ExpenseSummary['curr
             <g key={i} onMouseEnter={() => setHover(i)} onMouseLeave={() => setHover(null)}>
               {/* full-height hit target, larger than the bar */}
               <rect x={i * slot} y={top} width={slot} height={plotH} fill="transparent" />
-              {path && <path d={path} className={`fill-paw-forest dark:fill-paw-warm-sage transition-opacity ${hover !== null && hover !== i ? 'opacity-40' : ''}`} />}
+              {path && <path d={path} className={`fill-rose-500 dark:fill-rose-400 transition-opacity ${hover !== null && hover !== i ? 'opacity-40' : ''}`} />}
               <text x={i * slot + slot / 2} y={H - 6} textAnchor="middle"
                 className={`text-[11px] ${i === currentMonth ? 'fill-paw-dark dark:fill-white font-bold' : 'fill-paw-secondary dark:fill-paw-warm-sage'}`}>
                 {MONTHS[i]}
@@ -165,6 +191,7 @@ export const ExpensesTab: React.FC<{ pet: Pet }> = ({ pet }) => {
   const [editing, setEditing] = useState<Expense | 'new' | null>(null);
   const [exporting, setExporting] = useState(false);
   const [showAll, setShowAll] = useState(false);
+  const [categoryFilter, setCategoryFilter] = useState<'all' | ExpenseCategory>('all');
 
   // Re-summarise whenever the records, year, pet or scope change
   useEffect(() => {
@@ -177,6 +204,10 @@ export const ExpensesTab: React.FC<{ pet: Pet }> = ({ pet }) => {
   const visible = useMemo(
     () => expenses.filter((e) => e.date.startsWith(`${year}-`) && (scope === 'all' || e.petId === pet.id)),
     [expenses, year, scope, pet.id],
+  );
+  const filtered = useMemo(
+    () => visible.filter((e) => categoryFilter === 'all' || e.category === categoryFilter),
+    [visible, categoryFilter],
   );
   const years = useMemo(() => {
     const set = new Set([thisYear, ...expenses.map((e) => Number(e.date.slice(0, 4)))]);
@@ -192,38 +223,25 @@ export const ExpensesTab: React.FC<{ pet: Pet }> = ({ pet }) => {
   const change = summary && summary.lastMonth > 0 ? Math.round(((summary.thisMonth - summary.lastMonth) / summary.lastMonth) * 100) : null;
   const topCategory = summary?.byCategory[0];
   const maxCategory = summary?.byCategory[0]?.total || 0;
-  const shown = showAll ? visible : visible.slice(0, 12);
+  const shown = showAll ? filtered : filtered.slice(0, 12);
 
   return (
     <div className="space-y-8 animate-fadeIn">
-      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 pb-6 border-b border-paw-soft-sage/30 dark:border-paw-darkborder/50">
-        <div>
-          <div className="inline-flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-paw-forest dark:text-paw-sage"><Wallet className="w-4 h-4" /><span>Expense Tracker</span></div>
-          <h2 className="text-3xl font-extrabold text-paw-dark dark:text-white">What {scope === 'pet' ? pet.name : 'your pets'} cost{scope === 'pet' ? 's' : ''}</h2>
-          <p className="text-paw-secondary dark:text-paw-warm-sage/80 text-sm pt-1">Log vet bills, food, grooming and more to see where the money goes and plan ahead.</p>
-        </div>
-        <div className="flex flex-wrap items-center gap-2">
-          <div className="flex items-center gap-1 bg-paw-cream dark:bg-paw-darkcard p-1 rounded-2xl border border-paw-soft-sage/50 dark:border-paw-darkborder">
-            {(['pet', 'all'] as const).map((s) => (
-              <button key={s} onClick={() => setScope(s)} aria-pressed={scope === s}
-                className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-colors ${scope === s ? 'bg-paw-forest text-white' : 'text-paw-secondary dark:text-paw-warm-sage hover:text-paw-dark'}`}>
-                {s === 'pet' ? pet.name : 'All pets'}
-              </button>
-            ))}
-          </div>
-          <select value={year} onChange={(e) => setYear(Number(e.target.value))} aria-label="Year"
-            className="px-3 py-2 rounded-xl border border-paw-soft-sage dark:border-paw-darkborder bg-paw-cream dark:bg-paw-darkcard text-paw-dark dark:text-white text-xs font-bold">
-            {years.map((y) => <option key={y} value={y}>{y}</option>)}
-          </select>
-          <button onClick={exportCsv} disabled={exporting || visible.length === 0} title="Download as a spreadsheet (CSV)"
-            className="inline-flex items-center gap-1.5 px-4 py-2 rounded-full text-xs font-bold border border-paw-soft-sage dark:border-paw-darkborder text-paw-dark dark:text-white hover:border-paw-forest disabled:opacity-50">
-            {exporting ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <FileSpreadsheet className="w-3.5 h-3.5" />} Export CSV
-          </button>
-          <button onClick={() => setEditing('new')}
-            className="inline-flex items-center gap-1.5 px-5 py-2.5 rounded-full text-xs font-bold bg-paw-forest text-white hover:bg-paw-deep shadow-soft">
-            <Plus className="w-3.5 h-3.5" /> Add Expense
-          </button>
-        </div>
+      <SectionHeader icon={Wallet} tone="rose" eyebrow="Expenses" title={`What ${scope === 'pet' ? pet.name : 'your pets'} cost${scope === 'pet' ? 's' : ''}`}
+        description="Log vet bills, food, grooming and more to see where the money goes and plan ahead."
+        actions={<button onClick={() => setEditing('new')} className="btn-primary"><Plus className="w-4 h-4" /> Add expense</button>} />
+
+      <div className="flex flex-wrap items-center gap-2">
+        {pets.length > 1 && (
+          <Segmented<'pet' | 'all'> label="Whose expenses" value={scope} onChange={setScope}
+            options={[{ value: 'pet', label: pet.name }, { value: 'all', label: 'All pets' }]} />
+        )}
+        <select value={year} onChange={(e) => setYear(Number(e.target.value))} aria-label="Year" className="input w-auto py-1.5 rounded-full text-xs font-bold">
+          {years.map((y) => <option key={y} value={y}>{y}</option>)}
+        </select>
+        <button onClick={exportCsv} disabled={exporting || visible.length === 0} title="Download as a spreadsheet (CSV)" className="btn-secondary btn-sm ml-auto">
+          {exporting ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <FileSpreadsheet className="w-3.5 h-3.5" />} Export CSV
+        </button>
       </div>
 
       {/* Headline numbers */}
@@ -239,7 +257,7 @@ export const ExpensesTab: React.FC<{ pet: Pet }> = ({ pet }) => {
           { label: 'Monthly average', value: summary ? formatMoney(summary.monthlyAverage, currency) : '—', hint: year === thisYear ? 'So far this year' : `Across ${year}` },
           { label: 'Biggest category', value: topCategory ? `${categoryInfo(topCategory.category).emoji} ${topCategory.label}` : '—', hint: topCategory ? formatMoney(topCategory.total, currency) : 'Nothing logged yet' },
         ].map((tile) => (
-          <div key={tile.label} className="bg-paw-cream dark:bg-paw-darkcard rounded-2xl p-5 border border-paw-soft-sage/60 dark:border-paw-darkborder">
+          <div key={tile.label} className="card p-5">
             <div className="text-[11px] font-bold uppercase tracking-wider text-paw-secondary dark:text-paw-warm-sage">{tile.label}</div>
             <div className="text-xl sm:text-2xl font-extrabold text-paw-dark dark:text-white mt-1 truncate">{tile.value}</div>
             <div className="text-xs text-paw-secondary dark:text-paw-warm-sage mt-1 inline-flex items-center gap-1">{tile.icon}{tile.hint}</div>
@@ -248,13 +266,13 @@ export const ExpensesTab: React.FC<{ pet: Pet }> = ({ pet }) => {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <div className="lg:col-span-2 bg-paw-cream dark:bg-paw-darkcard rounded-3xl p-6 border border-paw-soft-sage/60 dark:border-paw-darkborder">
+        <div className="lg:col-span-2 card p-6">
           <h3 className="text-sm font-bold text-paw-dark dark:text-white mb-2">Spending by month · {year}</h3>
           {summary && summary.total > 0
             ? <MonthlyChart byMonth={summary.byMonth} currency={currency} currentMonth={year === thisYear ? Number(todayKey().slice(5, 7)) - 1 : null} />
             : <p className="text-sm text-paw-secondary dark:text-paw-warm-sage py-12 text-center">Nothing logged for {year} yet.</p>}
         </div>
-        <div className="bg-paw-cream dark:bg-paw-darkcard rounded-3xl p-6 border border-paw-soft-sage/60 dark:border-paw-darkborder">
+        <div className="card p-6">
           <h3 className="text-sm font-bold text-paw-dark dark:text-white mb-4">By category</h3>
           {summary && summary.byCategory.length ? (
             <ul className="space-y-3">
@@ -264,8 +282,8 @@ export const ExpensesTab: React.FC<{ pet: Pet }> = ({ pet }) => {
                     <span className="font-semibold text-paw-dark dark:text-white">{categoryInfo(c.category).emoji} {c.label}</span>
                     <span className="font-bold text-paw-dark dark:text-white">{formatMoney(c.total, currency)}</span>
                   </div>
-                  <div className="h-2 rounded-full bg-paw-soft-sage/50 dark:bg-paw-darkborder overflow-hidden">
-                    <div className="h-full rounded-full bg-paw-forest dark:bg-paw-warm-sage" style={{ width: `${maxCategory ? (c.total / maxCategory) * 100 : 0}%` }} />
+                  <div className="h-2 rounded-full bg-paw-mist dark:bg-paw-darkborder overflow-hidden">
+                    <div className={`h-full rounded-full transition-[width] duration-700 ${CATEGORY_BAR[c.category] ?? 'bg-paw-forest'}`} style={{ width: `${maxCategory ? (c.total / maxCategory) * 100 : 0}%` }} />
                   </div>
                 </li>
               ))}
@@ -276,21 +294,56 @@ export const ExpensesTab: React.FC<{ pet: Pet }> = ({ pet }) => {
 
       {/* The records */}
       <div>
-        <h3 className="text-sm font-bold text-paw-dark dark:text-white mb-3">Expenses in {year}</h3>
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
+          <h3 className="text-sm font-bold text-paw-dark dark:text-white">
+            Expenses in {year}
+            <span className="ml-2 text-xs font-normal text-paw-secondary dark:text-paw-warm-sage">
+              ({filtered.length} {filtered.length === 1 ? 'record' : 'records'})
+            </span>
+          </h3>
+        </div>
+
+        {visible.length > 0 && (
+          <div className="flex items-center gap-2 overflow-x-auto scrollbar-none pb-3 mb-3">
+            <button onClick={() => setCategoryFilter('all')} className={`chip ${categoryFilter === 'all' ? 'chip-active' : ''}`}>
+              All Categories ({visible.length})
+            </button>
+            {EXPENSE_CATEGORIES.map((c) => {
+              const count = visible.filter((e) => e.category === c.value).length;
+              if (count === 0 && categoryFilter !== c.value) return null;
+              return (
+                <button key={c.value} onClick={() => setCategoryFilter(c.value)} className={`chip ${categoryFilter === c.value ? 'chip-active' : ''}`}>
+                  <span>{c.emoji}</span>
+                  <span>{c.label}</span>
+                  <span className="text-[10px] opacity-75">({count})</span>
+                </button>
+              );
+            })}
+          </div>
+        )}
+
         {expensesLoading && !expenses.length ? (
           <div className="py-8 text-center"><Loader2 className="w-6 h-6 mx-auto animate-spin text-paw-secondary" /></div>
         ) : visible.length === 0 ? (
-          <div className="text-center py-10 text-paw-secondary dark:text-paw-warm-sage/60">
-            <Wallet className="w-10 h-10 mx-auto mb-3 opacity-40" />
-            <p className="font-semibold">No expenses logged for {year}.</p>
-            <p className="text-xs mt-1">Hit “Add Expense” after a vet visit, food run or grooming session.</p>
+          <EmptyState icon={Wallet} tone="rose" image="/images/frenchie.webp" title={`No expenses logged for ${year}`}
+            text="Add one after a vet visit, food run or grooming session to start seeing trends."
+            action={<button onClick={() => setEditing('new')} className="btn-primary"><Plus className="w-4 h-4" /> Add expense</button>} />
+        ) : filtered.length === 0 ? (
+          <div className="text-center py-10 text-paw-secondary dark:text-paw-warm-sage/60 card">
+            <p className="font-semibold">No {categoryInfo(categoryFilter as ExpenseCategory)?.label || ''} expenses found for {year}.</p>
+            <button
+              onClick={() => setCategoryFilter('all')}
+              className="mt-2 text-xs font-bold text-paw-forest dark:text-paw-sage hover:underline"
+            >
+              Show all categories
+            </button>
           </div>
         ) : (
           <>
-            <ul className="divide-y divide-paw-soft-sage/40 dark:divide-paw-darkborder rounded-2xl border border-paw-soft-sage/60 dark:border-paw-darkborder bg-white dark:bg-paw-darkcard overflow-hidden">
+            <ul className="card divide-y divide-paw-line dark:divide-paw-darkborder overflow-hidden">
               {shown.map((e) => (
-                <li key={e.id} className="flex items-center gap-4 px-4 py-3">
-                  <span className="w-9 h-9 rounded-xl bg-paw-light-sage dark:bg-paw-darksurface flex items-center justify-center text-base flex-shrink-0" aria-hidden>{categoryInfo(e.category).emoji}</span>
+                <li key={e.id} className="flex items-center gap-4 px-4 py-3 hover:bg-paw-mist/60 dark:hover:bg-paw-darksurface/60 transition-colors">
+                  <span className="w-10 h-10 rounded-2xl bg-rose-50 dark:bg-rose-500/10 flex items-center justify-center text-lg flex-shrink-0" aria-hidden>{categoryInfo(e.category).emoji}</span>
                   <div className="flex-1 min-w-0">
                     <div className="text-sm font-bold text-paw-dark dark:text-white truncate">{e.description || categoryInfo(e.category).label}</div>
                     <div className="text-xs text-paw-secondary dark:text-paw-warm-sage truncate">
@@ -304,9 +357,9 @@ export const ExpensesTab: React.FC<{ pet: Pet }> = ({ pet }) => {
                 </li>
               ))}
             </ul>
-            {visible.length > 12 && (
+            {filtered.length > 12 && (
               <button onClick={() => setShowAll((v) => !v)} className="mt-3 text-sm font-bold text-paw-forest dark:text-paw-sage hover:underline">
-                {showAll ? 'Show fewer' : `Show all ${visible.length}`}
+                {showAll ? 'Show fewer' : `Show all ${filtered.length}`}
               </button>
             )}
           </>

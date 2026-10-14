@@ -7,6 +7,7 @@ const CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID as string | undefined;
 type GoogleCredentialResponse = { credential?: string };
 type GoogleNotification = {
   isNotDisplayed?: () => boolean;
+  getNotDisplayedReason?: () => string;
   isSkippedMoment?: () => boolean;
 };
 
@@ -70,6 +71,12 @@ export async function requestGoogleIdToken(): Promise<string> {
 
     window.google!.accounts.id.prompt((notification) => {
       if (notification.isNotDisplayed?.() || notification.isSkippedMoment?.()) {
+        // This site's address isn't in the OAuth client's Authorized JavaScript origins
+        if (notification.getNotDisplayedReason?.() === 'unregistered_origin') {
+          console.error(`[google-sign-in] ${window.location.origin} is not an Authorized JavaScript origin for this Google client ID`);
+          reject(new Error("Google Sign-In isn't set up for this address yet. Please use your email instead."));
+          return;
+        }
         reject(new Error('Google Sign-In was cancelled. Please try again.'));
       }
     });

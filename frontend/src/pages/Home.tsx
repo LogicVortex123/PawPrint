@@ -1,16 +1,17 @@
 import React from 'react';
 import { HeroSection } from '../components/hero/HeroSection';
 import { FeaturesGrid } from '../components/home/FeaturesGrid';
-import { ValueSection } from '../components/home/ValueSection';
-import { TrustSection } from '../components/home/TrustSection';
+import { FeatureMarquee, HowItWorks, FaqSection, CtaBanner } from '../components/home/HomeSections';
 
 export const Home: React.FC = () => {
   return (
-    <div className="space-y-0">
+    <div>
       <HeroSection />
+      <FeatureMarquee />
       <FeaturesGrid />
-      <ValueSection />
-      <TrustSection />
+      <HowItWorks />
+      <FaqSection />
+      <CtaBanner />
     </div>
   );
 };

@@ -47,19 +47,20 @@ export const ReminderBell: React.FC<{ className?: string }> = ({ className = '' 
   return (
     <div ref={ref} className={`relative ${className}`}>
       <button onClick={() => setOpen((o) => !o)} aria-label={actionCount ? `Reminders, ${actionCount} need attention` : 'Reminders'} title="Reminders"
-        className="relative p-2 rounded-full text-paw-secondary dark:text-paw-warm-sage bg-white dark:bg-paw-darksurface border border-paw-soft-sage/80 dark:border-paw-darkborder hover:border-paw-forest transition-colors">
-        <Bell className="w-4 h-4" />
+        className="icon-btn relative">
+        <Bell className={`w-4 h-4 ${urgentCount ? 'origin-top animate-wiggle' : ''}`} />
         {actionCount > 0 && (
-          <span className={`absolute -top-1 -right-1 min-w-[18px] h-[18px] px-1 rounded-full text-[10px] font-extrabold text-white flex items-center justify-center ${urgentCount ? 'bg-rose-600' : 'bg-amber-500'}`}>
+          <span className={`absolute -top-0.5 -right-0.5 min-w-[18px] h-[18px] px-1 rounded-full text-[10px] font-extrabold text-white flex items-center justify-center ring-2 ring-white dark:ring-paw-darkbg ${urgentCount ? 'bg-rose-600' : 'bg-amber-500'}`}>
             {actionCount > 9 ? '9+' : actionCount}
           </span>
         )}
       </button>
 
       {open && (
-        <div className="absolute right-0 mt-2 w-[min(22rem,calc(100vw-2rem))] bg-[#FAFAF6] dark:bg-paw-darksurface rounded-2xl border border-paw-soft-sage/70 dark:border-paw-darkborder shadow-soft-xl overflow-hidden z-[60]">
-          <div className="px-4 py-3 border-b border-paw-soft-sage/50 dark:border-paw-darkborder">
+        <div className="absolute right-0 mt-2 w-[min(23rem,calc(100vw-2rem))] card overflow-hidden z-[60] animate-scaleIn">
+          <div className="px-4 py-3 border-b border-paw-line dark:border-paw-darkborder flex items-center justify-between">
             <span className="text-sm font-extrabold text-paw-dark dark:text-white">Reminders</span>
+            {actionCount > 0 && <span className={`badge ${urgentCount ? 'bg-rose-100 text-rose-700 dark:bg-rose-500/15 dark:text-rose-300' : 'bg-amber-100 text-amber-800 dark:bg-amber-500/15 dark:text-amber-300'}`}>{actionCount} to do</span>}
           </div>
 
           <div className="max-h-[60vh] overflow-y-auto p-2">
@@ -67,10 +68,10 @@ export const ReminderBell: React.FC<{ className?: string }> = ({ className = '' 
               <p className="px-3 py-6 text-sm text-center text-paw-secondary dark:text-paw-warm-sage">You're all caught up.</p>
             ) : reminders.slice(0, MAX_SHOWN).map((r) => (
               <button key={r.id} onClick={() => openReminders(r.petId, r.type === 'medication' ? 'medications' : 'reminders')}
-                className="w-full flex items-start gap-3 px-3 py-2.5 rounded-xl text-left hover:bg-paw-light-sage dark:hover:bg-paw-darkcard transition-colors">
-                <span className="relative w-8 h-8 rounded-lg bg-white dark:bg-paw-darkbg text-paw-forest dark:text-paw-sage flex items-center justify-center flex-shrink-0">
+                className="w-full flex items-start gap-3 px-3 py-2.5 rounded-xl text-left hover:bg-paw-mist dark:hover:bg-paw-darksurface transition-colors">
+                <span className="relative w-8 h-8 rounded-lg bg-paw-light-sage dark:bg-paw-darksurface text-paw-forest dark:text-paw-sage flex items-center justify-center flex-shrink-0">
                   {TYPE_ICON[r.type]}
-                  <span className={`absolute -top-0.5 -right-0.5 w-2.5 h-2.5 rounded-full ring-2 ring-[#FAFAF6] dark:ring-paw-darksurface ${DOT[r.urgency]}`} />
+                  <span className={`absolute -top-0.5 -right-0.5 w-2.5 h-2.5 rounded-full ring-2 ring-white dark:ring-paw-darkcard ${DOT[r.urgency]}`} />
                 </span>
                 <span className="flex-1 min-w-0">
                   <span className="block text-sm font-bold text-paw-dark dark:text-white truncate">{r.petName}: {r.title}</span>
@@ -80,7 +81,7 @@ export const ReminderBell: React.FC<{ className?: string }> = ({ className = '' 
             ))}
           </div>
 
-          <div className="px-4 py-3 border-t border-paw-soft-sage/50 dark:border-paw-darkborder space-y-2">
+          <div className="px-4 py-3 border-t border-paw-line dark:border-paw-darkborder space-y-2 bg-paw-mist/60 dark:bg-paw-darksurface/60">
             <NotificationToggle compact />
             <button onClick={() => openReminders()} className="w-full text-center text-sm font-bold text-paw-forest dark:text-paw-sage hover:underline">
               {reminders.length > MAX_SHOWN ? `See all ${reminders.length} reminders` : 'Open Smart Reminders'}

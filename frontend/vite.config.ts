@@ -7,6 +7,9 @@ export default defineConfig({
   plugins: [react()],
   server: {
     port: 5173,
+    // Fail instead of drifting to 5174 — Google Sign-In only works on origins
+    // registered for the OAuth client, so the dev URL must stay fixed
+    strictPort: true,
     host: true,
   },
   build: {

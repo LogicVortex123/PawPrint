@@ -28,7 +28,7 @@ import {
   mapBackendMedication,
   mapBackendExpense,
 } from '../lib/adapters';
-import { todayKey } from '../lib/dates';
+import { formatDateKey, todayKey } from '../lib/dates';
 
 type VaccinationInput = {
   vaccineName: string;
@@ -86,7 +86,19 @@ interface AppState {
   setSelectedPetId: (id: string) => void;
   selectedPet: () => Pet | null;
   fetchPets: () => Promise<void>;
-  createPet: (input: { name: string; species: 'dog' | 'cat' | 'other'; breed?: string; gender?: 'male' | 'female'; dateOfBirth?: string }) => Promise<void>;
+  createPet: (input: {
+    name: string;
+    species: 'dog' | 'cat' | 'other';
+    breed?: string;
+    gender?: 'male' | 'female';
+    dateOfBirth?: string;
+    allergies?: string[];
+    medications?: string[];
+    microchipId?: string;
+    emergencyContacts?: { name: string; phone: string }[];
+    targetWeightMinKg?: number | null;
+    targetWeightMaxKg?: number | null;
+  }) => Promise<Pet>;
   updatePet: (petId: string, input: {
     name?: string;
     species?: string;
@@ -169,6 +181,10 @@ interface AppState {
   toggleFavoriteClinic: (id: string) => void;
 
   // Toasts
+  // Global record search (Ctrl/⌘+K) — opened from the navbar or the app top bar
+  searchOpen: boolean;
+  setSearchOpen: (open: boolean) => void;
+
   toastMessage: string | null;
   showToast: (msg: string) => void;
   clearToast: () => void;
@@ -247,7 +263,8 @@ function buildTimeline({ vaccinations, weightRecords, appointments, documents }:
       petId: vac.petId,
       title: `${vac.name} Vaccination`,
       category: 'vaccination',
-      date,
+      // Stored as YYYY-MM-DD; shown like the other entries ("Jul 16, 2026")
+      date: date ? formatDateKey(date, { month: 'short', day: 'numeric', year: 'numeric' }) : '',
       sortDate: date,
       description: `Administered at ${vac.clinic} by ${vac.veterinarian}. Next due: ${vac.nextDueDate}.`,
     });
@@ -560,6 +577,7 @@ export const useAppStore = create<AppState>((set, get) => {
       set((state) => ({ pets: [...state.pets, pet], selectedPetId: pet.id }));
       scheduleRemindersRefresh();
       get().showToast(`🐾 ${pet.name}'s profile is ready! Start logging vaccinations and checkups.`);
+      return pet;
     },
 
     updatePet: async (petId, input) => {
@@ -1022,6 +1040,9 @@ export const useAppStore = create<AppState>((set, get) => {
       }, 4000);
     },
     clearToast: () => set({ toastMessage: null }),
+
+    searchOpen: false,
+    setSearchOpen: (open) => set({ searchOpen: open }),
   };
 });
 

@@ -1,234 +1,205 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { Menu, X, LogOut, User, Search, Settings as SettingsIcon } from 'lucide-react';
+import { Menu, X, LogOut, Search, Settings as SettingsIcon, Github, LayoutDashboard, ChevronDown, ArrowRight } from 'lucide-react';
 import { ThemeToggle } from './ThemeToggle';
-import { GlobalSearch } from './GlobalSearch';
 import { ReminderBell } from './ReminderBell';
-import { notifyDueReminders } from '../../lib/reminderNotifications';
 import { useAppStore } from '../../store/useAppStore';
 
-export const Navbar: React.FC = () => {
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const location = useLocation();
+export const GITHUB_URL = 'https://github.com/LogicVortex123/PawPrint';
+
+const NAV_LINKS = [
+  { label: 'Home', to: '/' },
+  { label: 'Features', to: '/#features' },
+  { label: 'How it works', to: '/#how-it-works' },
+  { label: 'About', to: '/about' },
+  { label: 'Roadmap', to: '/roadmap' },
+];
+
+export const Brand: React.FC<{ className?: string; light?: boolean }> = ({ className = '', light = false }) => (
+  <Link to="/" className={`flex items-center gap-2.5 group ${className}`}>
+    <span className="relative w-9 h-9 rounded-xl overflow-hidden ring-1 ring-paw-forest/15 shadow-2xs group-hover:rotate-[-6deg] transition-transform duration-300">
+      <img src="/logo.jpeg" alt="" className="w-full h-full object-cover" />
+    </span>
+    <span className={`text-xl font-extrabold tracking-tight ${light ? 'text-white' : 'text-paw-dark dark:text-white'}`}>
+      Paw<span className={light ? 'text-paw-warm-sage' : 'text-paw-forest dark:text-paw-sage'}>Print</span>
+    </span>
+  </Link>
+);
+
+// Avatar with a small dropdown for the signed-in user
+export const AccountMenu: React.FC<{ align?: 'left' | 'right'; up?: boolean }> = ({ align = 'right', up = false }) => {
+  const { user, logout, showToast } = useAppStore();
   const navigate = useNavigate();
-  const { isAuthenticated, user, logout, showToast, reminders, fetchReminders } = useAppStore();
-  const [searchOpen, setSearchOpen] = useState(false);
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
 
-  // Ctrl/⌘+K opens search from anywhere once logged in
   useEffect(() => {
-    if (!isAuthenticated) return;
-    const onKey = (e: KeyboardEvent) => {
-      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') { e.preventDefault(); setSearchOpen(true); }
-    };
-    window.addEventListener('keydown', onKey);
-    return () => window.removeEventListener('keydown', onKey);
-  }, [isAuthenticated]);
+    if (!open) return;
+    const onPointer = (e: MouseEvent) => { if (!ref.current?.contains(e.target as Node)) setOpen(false); };
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') setOpen(false); };
+    document.addEventListener('mousedown', onPointer);
+    document.addEventListener('keydown', onKey);
+    return () => { document.removeEventListener('mousedown', onPointer); document.removeEventListener('keydown', onKey); };
+  }, [open]);
 
-  // Keep reminders fresh while the app is open — due dates move as days pass
-  useEffect(() => {
-    if (!isAuthenticated) return;
-    fetchReminders();
-    const timer = setInterval(fetchReminders, 30 * 60 * 1000);
-    const onVisible = () => { if (document.visibilityState === 'visible') fetchReminders(); };
-    document.addEventListener('visibilitychange', onVisible);
-    return () => { clearInterval(timer); document.removeEventListener('visibilitychange', onVisible); };
-  }, [isAuthenticated, fetchReminders]);
-
-  // Browser alerts for urgent reminders and timed appointment alerts (only if the user turned alerts on)
-  useEffect(() => {
-    if (!isAuthenticated) return;
-    return notifyDueReminders(reminders, () => navigate('/features?tab=reminders'));
-  }, [isAuthenticated, reminders, navigate]);
-
-  const navLinks = [
-    { label: 'Home', path: '/' },
-    { label: 'Features', path: '/features' },
-    { label: 'About', path: '/about' },
-    { label: 'Roadmap', path: '/roadmap' },
-    { label: 'Analytics', path: '/analytics' },
-  ];
-
-  const isActive = (path: string) => {
-    if (path === '/') return location.pathname === '/';
-    return location.pathname.startsWith(path);
-  };
+  if (!user) return null;
+  const initials = user.name.split(' ').map((p) => p[0]).slice(0, 2).join('').toUpperCase();
 
   const handleLogout = () => {
-    logout();
-    showToast('You\'ve been signed out. See you soon! 👋');
-    setMobileMenuOpen(false);
+    setOpen(false);
+    // Leave the protected page first; logging out while still on it would
+    // bounce to /login instead of the home page
     navigate('/');
+    setTimeout(() => {
+      logout();
+      showToast('You\'ve been signed out. See you soon! 👋');
+    }, 0);
   };
 
   return (
-    <header className="print:hidden sticky top-0 z-50 bg-paw-cream/95 dark:bg-paw-darkbg/95 backdrop-blur-md transition-colors duration-200">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex items-center justify-between h-20">
-
-          {/* Brand */}
-          <Link to="/" className="flex items-center gap-3 group">
-            <div className="relative w-10 h-10 rounded-full overflow-hidden border border-paw-forest/20 shadow-sm group-hover:scale-105 transition-transform duration-300">
-              <img src="/logo.jpeg" alt="PawPrint Logo" className="w-full h-full object-cover" />
-            </div>
-            <span className="text-2xl font-bold tracking-tight text-paw-dark dark:text-white font-sans">
-              PawPrint
-            </span>
+    <div ref={ref} className="relative">
+      <button onClick={() => setOpen((o) => !o)} aria-haspopup="menu" aria-expanded={open} aria-label="Account menu"
+        className="flex items-center gap-2 pl-1 pr-2.5 py-1 rounded-full border border-paw-line dark:border-paw-darkborder bg-white dark:bg-paw-darkcard hover:border-paw-forest dark:hover:border-paw-sage transition-colors">
+        <span className="w-7 h-7 rounded-full bg-gradient-to-br from-paw-forest to-emerald-400 text-white text-[11px] font-extrabold flex items-center justify-center">{initials}</span>
+        <span className="hidden lg:block text-sm font-semibold text-paw-dark dark:text-white max-w-[110px] truncate">{user.name.split(' ')[0]}</span>
+        <ChevronDown className={`w-3.5 h-3.5 text-paw-secondary transition-transform ${open ? 'rotate-180' : ''}`} />
+      </button>
+      {open && (
+        <div role="menu" className={`absolute ${align === 'right' ? 'right-0' : 'left-0'} ${up ? 'bottom-full mb-2' : 'top-full mt-2'} w-60 card p-2 z-[60] animate-scaleIn`}>
+          <div className="px-3 py-2.5 border-b border-paw-line dark:border-paw-darkborder mb-1">
+            <div className="text-sm font-bold text-paw-dark dark:text-white truncate">{user.name}</div>
+            <div className="text-xs text-paw-secondary dark:text-paw-warm-sage truncate">{user.email}</div>
+          </div>
+          <Link role="menuitem" to="/features" onClick={() => setOpen(false)} className="flex items-center gap-2.5 px-3 py-2 rounded-xl text-sm font-semibold text-paw-dark dark:text-white hover:bg-paw-light-sage dark:hover:bg-paw-darksurface">
+            <LayoutDashboard className="w-4 h-4 text-paw-forest dark:text-paw-sage" /> Dashboard
           </Link>
+          <Link role="menuitem" to="/settings" onClick={() => setOpen(false)} className="flex items-center gap-2.5 px-3 py-2 rounded-xl text-sm font-semibold text-paw-dark dark:text-white hover:bg-paw-light-sage dark:hover:bg-paw-darksurface">
+            <SettingsIcon className="w-4 h-4 text-paw-forest dark:text-paw-sage" /> Account settings
+          </Link>
+          <button role="menuitem" onClick={handleLogout} className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-sm font-semibold text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/30">
+            <LogOut className="w-4 h-4" /> Log out
+          </button>
+        </div>
+      )}
+    </div>
+  );
+};
 
-          {/* Desktop nav links */}
-          <nav className="hidden md:flex items-center gap-8">
-            {navLinks.map((link) => {
-              const active = isActive(link.path);
-              return (
-                <Link
-                  key={link.path}
-                  to={link.path}
-                  className={`relative text-sm font-medium transition-colors duration-200 py-1 ${
-                    active
-                      ? 'text-paw-forest dark:text-paw-light-sage font-semibold'
-                      : 'text-paw-secondary hover:text-paw-forest dark:text-paw-warm-sage/80 dark:hover:text-white'
-                  }`}
-                >
-                  {link.label}
-                  {active && (
-                    <span className="absolute -bottom-1 left-0 right-0 h-0.5 bg-paw-forest dark:bg-paw-sage rounded-full" />
-                  )}
-                </Link>
-              );
-            })}
+export const Navbar: React.FC = () => {
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [scrolled, setScrolled] = useState(false);
+  const location = useLocation();
+  const navigate = useNavigate();
+  const { isAuthenticated, user, setSearchOpen, logout, showToast } = useAppStore();
+
+  const handleLogout = () => {
+    navigate('/');
+    setTimeout(() => {
+      logout();
+      showToast('You\'ve been signed out. See you soon! 👋');
+    }, 0);
+  };
+
+  useEffect(() => {
+    const onScroll = () => setScrolled(window.scrollY > 12);
+    onScroll();
+    window.addEventListener('scroll', onScroll, { passive: true });
+    return () => window.removeEventListener('scroll', onScroll);
+  }, []);
+
+  useEffect(() => { setMobileMenuOpen(false); }, [location.pathname, location.hash]);
+
+  const isActive = (to: string) => {
+    if (to.includes('#')) return location.pathname === '/' && location.hash === to.slice(1);
+    if (to === '/') return location.pathname === '/' && !location.hash;
+    return location.pathname.startsWith(to);
+  };
+
+  return (
+    <header className="print:hidden sticky top-0 z-50 px-3 sm:px-6 pt-3">
+      <div className={`max-w-7xl mx-auto rounded-full transition-all duration-300 ${scrolled
+        ? 'glass-card border border-paw-line/80 dark:border-paw-darkborder shadow-soft'
+        : 'bg-transparent border border-transparent'}`}>
+        <div className="flex items-center justify-between h-16 pl-4 pr-2 sm:pl-5 sm:pr-3">
+          <Brand />
+
+          <nav className="hidden md:flex items-center gap-1" aria-label="Main">
+            {NAV_LINKS.map((link) => (
+              <Link key={link.to} to={link.to}
+                className={`px-3.5 py-2 rounded-full text-sm font-semibold transition-colors ${isActive(link.to)
+                  ? 'text-paw-forest dark:text-white bg-paw-light-sage dark:bg-paw-darkcard'
+                  : 'text-paw-secondary dark:text-paw-warm-sage/80 hover:text-paw-dark dark:hover:text-white'}`}>
+                {link.label}
+              </Link>
+            ))}
           </nav>
 
-          {/* Desktop right area */}
-          <div className="hidden md:flex items-center gap-4">
+          <div className="hidden md:flex items-center gap-2">
             {isAuthenticated && (
-              <button onClick={() => setSearchOpen(true)} aria-label="Search records" title="Search"
-                className="flex items-center gap-2 p-2 rounded-full text-sm text-paw-secondary dark:text-paw-warm-sage bg-white dark:bg-paw-darksurface border border-paw-soft-sage/80 dark:border-paw-darkborder hover:border-paw-forest transition-colors">
+              <button onClick={() => setSearchOpen(true)} aria-label="Search records" title="Search"className="icon-btn">
                 <Search className="w-4 h-4" />
               </button>
             )}
             {isAuthenticated && <ReminderBell />}
+            <a href={GITHUB_URL} target="_blank" rel="noopener noreferrer" aria-label="View on GitHub" title="View on GitHub" className="icon-btn">
+              <Github className="w-4 h-4" />
+            </a>
             <ThemeToggle />
-
             {isAuthenticated && user ? (
-              // Logged-in state: show user name + logout
-              <div className="flex items-center gap-3">
-                <Link to="/settings" title="Account settings"
-                  className="flex items-center gap-2 px-4 py-2 rounded-full bg-paw-light-sage/60 dark:bg-paw-darksurface border border-paw-soft-sage/70 dark:border-paw-darkborder hover:border-paw-forest transition-colors">
-                  <User className="w-4 h-4 text-paw-forest dark:text-paw-sage" />
-                  <span className="text-sm font-semibold text-paw-dark dark:text-white max-w-[120px] truncate">
-                    {user.name.split(' ')[0]}
-                  </span>
-                  <SettingsIcon className="w-3.5 h-3.5 text-paw-secondary" />
-                </Link>
-                <button
-                  onClick={handleLogout}
-                  className="flex items-center gap-1.5 px-4 py-2 text-sm font-medium text-paw-dark dark:text-white bg-white dark:bg-paw-darksurface border border-paw-soft-sage/80 dark:border-paw-darkborder rounded-full hover:bg-rose-50 hover:border-rose-200 hover:text-rose-600 dark:hover:bg-rose-950/30 dark:hover:border-rose-900 dark:hover:text-rose-300 transition-colors shadow-2xs"
-                >
-                  <LogOut className="w-3.5 h-3.5" />
-                  Logout
-                </button>
-              </div>
-            ) : (
-              // Logged-out state: show Login + Sign Up
               <>
-                <Link
-                  to="/login"
-                  className="px-5 py-2 text-sm font-medium text-paw-dark dark:text-white bg-white dark:bg-paw-darksurface border border-paw-soft-sage/80 dark:border-paw-darkborder rounded-full hover:bg-paw-light-sage/40 transition-colors shadow-2xs"
-                >
-                  Login
+                <Link to="/features" className="btn-primary btn-sm">
+                  <LayoutDashboard className="w-3.5 h-3.5" /> Dashboard
                 </Link>
-                <Link
-                  to="/signup"
-                  className="px-5 py-2 text-sm font-semibold text-white bg-paw-forest hover:bg-paw-deep rounded-full shadow-soft hover:shadow-soft-lg transition-all duration-200"
-                >
-                  Sign Up
+                <AccountMenu />
+              </>
+            ) : (
+              <>
+                <Link to="/login" className="btn-ghost btn-sm">Log in</Link>
+                <Link to="/signup" className="btn-primary btn-sm group">
+                  Get started <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-0.5 transition-transform" />
                 </Link>
               </>
             )}
           </div>
 
-          {/* Mobile menu button */}
-          <div className="flex items-center gap-3 md:hidden">
-            {isAuthenticated && (
-              <button onClick={() => setSearchOpen(true)} aria-label="Search records"
-                className="p-2 rounded-full text-paw-forest dark:text-paw-warm-sage bg-paw-light-sage dark:bg-paw-darksurface border border-paw-soft-sage dark:border-paw-darkborder">
-                <Search className="w-4 h-4" />
-              </button>
-            )}
+          <div className="flex items-center gap-1.5 md:hidden">
             {isAuthenticated && <ReminderBell />}
             <ThemeToggle />
-            <button
-              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-              type="button"
-              className="p-2 rounded-xl text-paw-dark dark:text-paw-light-sage hover:bg-paw-soft-sage/40 dark:hover:bg-paw-darksurface"
-              aria-label="Toggle navigation menu"
-            >
-              {mobileMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
+            <button onClick={() => setMobileMenuOpen((o) => !o)} type="button" className="icon-btn" aria-label="Toggle navigation menu" aria-expanded={mobileMenuOpen}>
+              {mobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
             </button>
           </div>
         </div>
       </div>
 
-      {/* Mobile drawer */}
       {mobileMenuOpen && (
-        <div className="md:hidden border-t border-paw-soft-sage/40 dark:border-paw-darkborder/40 bg-paw-cream dark:bg-paw-darkbg px-4 pt-3 pb-6 space-y-2 animate-fadeIn shadow-lg">
-          {navLinks.map((link) => {
-            const active = isActive(link.path);
-            return (
-              <Link
-                key={link.path}
-                to={link.path}
-                onClick={() => setMobileMenuOpen(false)}
-                className={`block px-4 py-2.5 rounded-xl text-base font-medium ${
-                  active
-                    ? 'bg-paw-soft-sage/60 dark:bg-paw-darksurface text-paw-forest dark:text-paw-light-sage font-semibold'
-                    : 'text-paw-secondary dark:text-paw-warm-sage hover:bg-paw-soft-sage/30'
-                }`}
-              >
-                {link.label}
-              </Link>
-            );
-          })}
-
-          <div className="pt-4 border-t border-paw-soft-sage/30 dark:border-paw-darkborder/40 flex flex-col gap-2">
+        <div className="md:hidden max-w-7xl mx-auto mt-2 card p-3 space-y-1 animate-scaleIn">
+          {NAV_LINKS.map((link) => (
+            <Link key={link.to} to={link.to}
+              className={`block px-4 py-3 rounded-2xl text-base font-semibold ${isActive(link.to)
+                ? 'bg-paw-light-sage dark:bg-paw-darksurface text-paw-forest dark:text-white'
+                : 'text-paw-secondary dark:text-paw-warm-sage hover:bg-paw-mist dark:hover:bg-paw-darksurface'}`}>
+              {link.label}
+            </Link>
+          ))}
+          <div className="pt-3 mt-2 border-t border-paw-line dark:border-paw-darkborder grid grid-cols-2 gap-2">
             {isAuthenticated && user ? (
               <>
-                <Link to="/settings" onClick={() => setMobileMenuOpen(false)}
-                  className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-paw-light-sage/60 dark:bg-paw-darksurface border border-paw-soft-sage/50 dark:border-paw-darkborder">
-                  <User className="w-4 h-4 text-paw-forest dark:text-paw-sage" />
-                  <span className="flex-1 text-sm font-semibold text-paw-dark dark:text-white">{user.name}</span>
-                  <span className="text-xs font-semibold text-paw-secondary">Settings</span>
-                </Link>
-                <button
-                  onClick={handleLogout}
-                  className="flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-medium text-rose-600 dark:text-rose-400 border border-rose-200 dark:border-rose-900/50 bg-rose-50 dark:bg-rose-950/20"
-                >
-                  <LogOut className="w-4 h-4" />
-                  Logout
-                </button>
+                <Link to="/features" className="btn-primary col-span-2"><LayoutDashboard className="w-4 h-4" /> Open dashboard</Link>
+                <button onClick={() => setSearchOpen(true)} className="btn-secondary"><Search className="w-4 h-4" /> Search</button>
+                <Link to="/settings" className="btn-secondary"><SettingsIcon className="w-4 h-4" /> Settings</Link>
+                <button onClick={handleLogout} className="btn-danger-outline col-span-2"><LogOut className="w-4 h-4" /> Log out</button>
               </>
             ) : (
               <>
-                <Link
-                  to="/login"
-                  onClick={() => setMobileMenuOpen(false)}
-                  className="text-center py-2.5 rounded-xl text-sm font-medium text-paw-forest dark:text-paw-light-sage border border-paw-soft-sage dark:border-paw-darkborder bg-white dark:bg-paw-darksurface"
-                >
-                  Login
-                </Link>
-                <Link
-                  to="/signup"
-                  onClick={() => setMobileMenuOpen(false)}
-                  className="text-center py-2.5 rounded-xl text-sm font-semibold text-white bg-paw-forest hover:bg-paw-deep shadow-soft"
-                >
-                  Sign Up
-                </Link>
+                <Link to="/login" className="btn-secondary">Log in</Link>
+                <Link to="/signup" className="btn-primary">Get started</Link>
               </>
             )}
+            <a href={GITHUB_URL} target="_blank" rel="noopener noreferrer" className="btn-ghost col-span-2"><Github className="w-4 h-4" /> View on GitHub</a>
           </div>
         </div>
       )}
-      <GlobalSearch open={searchOpen} onClose={() => setSearchOpen(false)} />
     </header>
   );
 };

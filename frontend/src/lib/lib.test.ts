@@ -46,7 +46,7 @@ describe('adapters', () => {
       allergies: ['Chicken', ''], targetWeightMinKg: 25, targetWeightMaxKg: null,
     });
     expect(pet).toMatchObject({ id: 'p1', species: 'dog', gender: 'Female', dob: '2020-02-10', allergies: ['Chicken'], targetWeightMinKg: 25, targetWeightMaxKg: null });
-    expect(pet.photo).toBe('/dog.jpg');
+    expect(pet.photo).toBe('/images/dog-portrait.webp');
   });
 
   it('maps an expense', () => {

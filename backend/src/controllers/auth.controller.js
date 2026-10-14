@@ -106,7 +106,7 @@ const me = asyncHandler(async (req, res) => {
 // POST /auth/google — accepts a Google ID token from either the mobile app or web
 const google = asyncHandler(async (req, res) => {
   const { idToken } = req.body;
-  if (!idToken || typeof idToken !== 'string') throw new ApiError(400, 'idToken is required');
+  if (!idToken || typeof idToken !== 'string') throw new ApiError(400, "Google sign-in didn't finish. Please try again.");
 
   const { googleId, email, name } = await verifyGoogleToken(idToken);
 

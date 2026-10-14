@@ -11,7 +11,7 @@ const expenseSchema = new mongoose.Schema(
     amount: {
       type: Number,
       required: [true, 'Amount is required'],
-      min: [0, 'Amount cannot be negative'],
+      min: [0.01, 'Amount must be more than zero'],
       max: [10_000_000, 'Amount is too large'],
     },
     date: { type: String, required: true, match: [/^\d{4}-\d{2}-\d{2}$/, 'Date must be YYYY-MM-DD'] },

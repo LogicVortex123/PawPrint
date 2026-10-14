@@ -5,6 +5,8 @@ import { Navbar } from './components/common/Navbar';
 import { Footer } from './components/common/Footer';
 import { Toast } from './components/common/Toast';
 import { ErrorBoundary } from './components/common/ErrorBoundary';
+import { GlobalEffects } from './components/common/GlobalEffects';
+import { AppShell } from './components/layout/AppShell';
 import { Home } from './pages/Home';
 import { useAppStore } from './store/useAppStore';
 
@@ -28,16 +30,26 @@ const SharedRecord = page(() => import('./pages/SharedRecord'), 'SharedRecord');
 const NotFound = page(() => import('./pages/NotFound'), 'NotFound');
 
 const PageLoader = () => (
-  <div className="py-32 flex justify-center text-paw-secondary dark:text-paw-warm-sage" role="status" aria-label="Loading page">
-    <Loader2 className="w-7 h-7 animate-spin" />
+  <div className="py-32 flex flex-col items-center gap-3 text-paw-secondary dark:text-paw-warm-sage" role="status" aria-label="Loading page">
+    <Loader2 className="w-7 h-7 animate-spin text-paw-forest dark:text-paw-sage" />
+    <span className="text-xs font-semibold">Fetching treats…</span>
   </div>
 );
 
+// Signed-in app pages use the sidebar layout; everything else gets the public navbar + footer
+const APP_PATHS = ['/features', '/analytics', '/settings'];
+
 function ScrollToTop() {
-  const { pathname } = useLocation();
+  const { pathname, hash } = useLocation();
   useEffect(() => {
+    // Links like /#features scroll to that section once the page has rendered
+    if (hash) {
+      const id = decodeURIComponent(hash.slice(1));
+      const t = setTimeout(() => document.getElementById(id)?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 60);
+      return () => clearTimeout(t);
+    }
     window.scrollTo(0, 0);
-  }, [pathname]);
+  }, [pathname, hash]);
   return null;
 }
 
@@ -46,10 +58,13 @@ function ScrollToTop() {
 // redirect param so we can bounce them back after they sign in.
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { isAuthenticated } = useAppStore();
-  const { pathname } = useLocation();
+  const { pathname, search } = useLocation();
 
   if (!isAuthenticated) {
-    return <Navigate to={`/login?redirect=${encodeURIComponent(pathname)}`} replace />;
+    // Navigations run as transitions, so right after "Log out → home page" the
+    // old protected page can render once more; don't hijack that with /login
+    if (window.location.pathname !== pathname) return null;
+    return <Navigate to={`/login?redirect=${encodeURIComponent(pathname + search)}`} replace />;
   }
 
   return <>{children}</>;
@@ -75,33 +90,16 @@ export const App: React.FC = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isAuthenticated]);
 
-  return (
-    <div className="min-h-screen flex flex-col bg-paw-cream dark:bg-paw-darkbg print:bg-white text-paw-dark dark:text-white transition-colors duration-200">
-      <ScrollToTop />
-      <Navbar />
-      <main className="flex-grow">
-        <ErrorBoundary resetKey={pathname}>
-        <Suspense fallback={<PageLoader />}>
+  const routes = (
+    <ErrorBoundary resetKey={pathname}>
+      <Suspense fallback={<PageLoader />}>
         <Routes>
           <Route path="/" element={<Home />} />
-          <Route
-            path="/features"
-            element={
-              <ProtectedRoute>
-                <Features />
-              </ProtectedRoute>
-            }
-          />
+          <Route path="/features" element={<ProtectedRoute><Features /></ProtectedRoute>} />
+          <Route path="/dashboard" element={<Navigate to="/features" replace />} />
           <Route path="/about" element={<About />} />
           <Route path="/roadmap" element={<Roadmap />} />
-          <Route
-            path="/analytics"
-            element={
-              <ProtectedRoute>
-                <Analytics />
-              </ProtectedRoute>
-            }
-          />
+          <Route path="/analytics" element={<ProtectedRoute><Analytics /></ProtectedRoute>} />
           <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
           <Route path="/emergency" element={<ProtectedRoute><EmergencyMode /></ProtectedRoute>} />
           <Route path="/pets/:petId/summary" element={<ProtectedRoute><HealthSummary /></ProtectedRoute>} />
@@ -113,10 +111,27 @@ export const App: React.FC = () => {
           <Route path="/share/:token" element={<SharedRecord />} />
           <Route path="*" element={<NotFound />} />
         </Routes>
-        </Suspense>
-        </ErrorBoundary>
-      </main>
-      <Footer />
+      </Suspense>
+    </ErrorBoundary>
+  );
+
+  const inApp = isAuthenticated && APP_PATHS.some((p) => pathname.startsWith(p));
+  // Auth screens are full-bleed split layouts with their own header
+  const bare = ['/login', '/signup'].includes(pathname);
+
+  return (
+    <div className="min-h-screen flex flex-col bg-paw-cream dark:bg-paw-darkbg print:bg-white text-paw-dark dark:text-white transition-colors duration-200">
+      <ScrollToTop />
+      <GlobalEffects />
+      {inApp ? (
+        <AppShell>{routes}</AppShell>
+      ) : (
+        <>
+          {!bare && <Navbar />}
+          <main className="flex-grow">{routes}</main>
+          {!bare && <Footer />}
+        </>
+      )}
       <Toast />
     </div>
   );

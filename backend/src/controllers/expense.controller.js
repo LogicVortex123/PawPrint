@@ -24,7 +24,11 @@ function yearFrom(req, todayKey) {
 async function readExpenseFields(body, userId, { partial = false } = {}) {
   const fields = pick(body, ['category', 'amount', 'date', 'description', 'vendor', 'appointment']);
 
-  if (!partial || fields.amount !== undefined) fields.amount = Math.round(requireNumber(fields.amount, 'Amount', { min: 0, max: 10_000_000 }) * 100) / 100;
+  if (!partial || fields.amount !== undefined) {
+    fields.amount = Math.round(requireNumber(fields.amount, 'Amount', { min: 0, max: 10_000_000 }) * 100) / 100;
+    // A zero (or rounds-to-zero) amount isn't a cost and would only skew the averages
+    if (fields.amount <= 0) throw new ApiError(400, 'Amount must be more than zero');
+  }
   if (!partial || fields.date !== undefined) {
     if (!isDateKey(fields.date)) throw new ApiError(400, 'A valid date is required');
   }
