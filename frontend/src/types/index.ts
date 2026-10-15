@@ -200,6 +200,7 @@ export interface Expense {
   id: string;
   petId: string;
   category: ExpenseCategory;
+  customCategory: string; // the owner's own name for an "other" expense, '' if none
   amount: number;
   date: string; // YYYY-MM-DD
   description: string;
@@ -209,6 +210,7 @@ export interface Expense {
 
 export interface ExpenseInput {
   category: ExpenseCategory;
+  customCategory?: string;
   amount: number;
   date: string;
   description?: string;

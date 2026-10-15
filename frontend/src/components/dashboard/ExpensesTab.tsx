@@ -4,7 +4,7 @@ import { useAppStore } from '../../store/useAppStore';
 import { apiRequest } from '../../lib/api';
 import { Modal, inputCls, labelCls, primaryBtnCls, dangerBtnCls } from '../common/Modal';
 import { Expense, ExpenseCategory, ExpenseInput, ExpenseSummary, Pet, DEFAULT_PREFERENCES } from '../../types';
-import { EXPENSE_CATEGORIES, categoryInfo, formatMoney } from '../../lib/money';
+import { EXPENSE_CATEGORIES, categoryInfo, expenseCategoryLabel, formatMoney } from '../../lib/money';
 import { todayKey, formatDateKey } from '../../lib/dates';
 import { EmptyState, SectionHeader, Segmented } from '../ui';
 
@@ -21,11 +21,14 @@ const CATEGORY_BAR: Partial<Record<ExpenseCategory, string>> = {
 export type ExpensePrefill = Partial<ExpenseInput> & { petId?: string };
 
 export const ExpenseFormModal: React.FC<{ pet: Pet; expense?: Expense; prefill?: ExpensePrefill; onClose: () => void }> = ({ pet, expense, prefill, onClose }) => {
-  const { addExpense, updateExpense, deleteExpense, showToast, user, pets } = useAppStore();
+  const { addExpense, updateExpense, deleteExpense, showToast, user, pets, expenses } = useAppStore();
   const currency = user?.preferences?.currency ?? DEFAULT_PREFERENCES.currency;
   const [targetPetId, setTargetPetId] = useState<string>(expense?.petId ?? prefill?.petId ?? pet.id);
   const [amount, setAmount] = useState(expense ? String(expense.amount) : prefill?.amount ? String(prefill.amount) : '');
   const [category, setCategory] = useState<ExpenseCategory>(expense?.category ?? prefill?.category ?? 'food');
+  const [customCategory, setCustomCategory] = useState(expense?.customCategory ?? prefill?.customCategory ?? '');
+  // Focus the custom name box only when the user picks "Other", not when the form opens on it
+  const [pickedCategory, setPickedCategory] = useState(false);
   const [date, setDate] = useState(expense?.date ?? prefill?.date ?? todayKey());
   const [description, setDescription] = useState(expense?.description ?? prefill?.description ?? '');
   const [vendor, setVendor] = useState(expense?.vendor ?? prefill?.vendor ?? '');
@@ -34,13 +37,26 @@ export const ExpenseFormModal: React.FC<{ pet: Pet; expense?: Expense; prefill?:
 
   const targetPet = pets.find((p) => p.id === targetPetId) || pet;
 
+  // Custom categories typed before, offered as suggestions so the same name is reused
+  const pastCustomCategories = useMemo(() => {
+    const seen = new Map<string, string>();
+    for (const e of expenses) {
+      const name = e.category === 'other' ? e.customCategory.trim() : '';
+      if (name && !seen.has(name.toLowerCase())) seen.set(name.toLowerCase(), name);
+    }
+    return [...seen.values()].sort((a, b) => a.localeCompare(b));
+  }, [expenses]);
+
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
     const value = Number(amount);
     if (!amount || !Number.isFinite(value) || value <= 0) { showToast('⚠️ Enter an amount greater than zero.'); return; }
     setSaving(true);
     try {
-      const input: ExpenseInput = { amount: value, category, date, description: description.trim(), vendor: vendor.trim() };
+      const input: ExpenseInput = {
+        amount: value, category, date, description: description.trim(), vendor: vendor.trim(),
+        customCategory: category === 'other' ? customCategory.trim() : '',
+      };
       if (expense) await updateExpense(expense.id, { ...input, pet: targetPetId });
       else await addExpense(targetPetId, { ...input, appointment: prefill?.appointment ?? undefined });
       onClose();
@@ -95,7 +111,7 @@ export const ExpenseFormModal: React.FC<{ pet: Pet; expense?: Expense; prefill?:
           <label className={labelCls}>Category</label>
           <div className="grid grid-cols-3 gap-2">
             {EXPENSE_CATEGORIES.map((c) => (
-              <button key={c.value} type="button" onClick={() => setCategory(c.value)} aria-pressed={category === c.value}
+              <button key={c.value} type="button" onClick={() => { setCategory(c.value); setPickedCategory(true); }} aria-pressed={category === c.value}
                 className={`px-2 py-2.5 rounded-2xl text-xs font-bold border transition-all ${category === c.value
                   ? 'bg-paw-forest text-white border-paw-forest shadow-soft scale-[1.02]'
                   : 'bg-white dark:bg-paw-darkcard text-paw-dark dark:text-white border-paw-line dark:border-paw-darkborder hover:border-paw-forest'}`}>
@@ -103,6 +119,25 @@ export const ExpenseFormModal: React.FC<{ pet: Pet; expense?: Expense; prefill?:
               </button>
             ))}
           </div>
+          {category === 'other' && (
+            <div className="mt-3">
+              <label htmlFor="expense-custom-category" className={labelCls}>Your category</label>
+              <input
+                id="expense-custom-category"
+                autoFocus={pickedCategory}
+                value={customCategory}
+                maxLength={40}
+                list="expense-custom-categories"
+                onChange={(e) => setCustomCategory(e.target.value)}
+                placeholder="e.g. Daycare, Pet taxi, Photoshoot"
+                className={inputCls}
+              />
+              <datalist id="expense-custom-categories">
+                {pastCustomCategories.map((name) => <option key={name} value={name} />)}
+              </datalist>
+              <p className="mt-1 text-xs text-paw-secondary dark:text-paw-warm-sage">Optional. Leave empty to keep it as "Other".</p>
+            </div>
+          )}
         </div>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <div>
@@ -277,7 +312,7 @@ export const ExpensesTab: React.FC<{ pet: Pet }> = ({ pet }) => {
           {summary && summary.byCategory.length ? (
             <ul className="space-y-3">
               {summary.byCategory.map((c) => (
-                <li key={c.category}>
+                <li key={`${c.category}:${c.label}`}>
                   <div className="flex justify-between text-xs mb-1">
                     <span className="font-semibold text-paw-dark dark:text-white">{categoryInfo(c.category).emoji} {c.label}</span>
                     <span className="font-bold text-paw-dark dark:text-white">{formatMoney(c.total, currency)}</span>
@@ -345,9 +380,9 @@ export const ExpensesTab: React.FC<{ pet: Pet }> = ({ pet }) => {
                 <li key={e.id} className="flex items-center gap-4 px-4 py-3 hover:bg-paw-mist/60 dark:hover:bg-paw-darksurface/60 transition-colors">
                   <span className="w-10 h-10 rounded-2xl bg-rose-50 dark:bg-rose-500/10 flex items-center justify-center text-lg flex-shrink-0" aria-hidden>{categoryInfo(e.category).emoji}</span>
                   <div className="flex-1 min-w-0">
-                    <div className="text-sm font-bold text-paw-dark dark:text-white truncate">{e.description || categoryInfo(e.category).label}</div>
+                    <div className="text-sm font-bold text-paw-dark dark:text-white truncate">{e.description || expenseCategoryLabel(e)}</div>
                     <div className="text-xs text-paw-secondary dark:text-paw-warm-sage truncate">
-                      {formatDateKey(e.date)} · {categoryInfo(e.category).label}{e.vendor && ` · ${e.vendor}`}{scope === 'all' && ` · ${petName(e.petId)}`}
+                      {formatDateKey(e.date)} · {expenseCategoryLabel(e)}{e.vendor && ` · ${e.vendor}`}{scope === 'all' && ` · ${petName(e.petId)}`}
                     </div>
                   </div>
                   <div className="text-sm font-extrabold text-paw-dark dark:text-white whitespace-nowrap">{formatMoney(e.amount, currency)}</div>

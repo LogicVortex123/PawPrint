@@ -4,7 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import { Search, PawPrint, Syringe, Calendar, FileText, History, X, Pill, Wallet } from 'lucide-react';
 import { useAppStore } from '../../store/useAppStore';
 import { StorageKeys, readJson, writeJson, removeKey } from '../../lib/storage';
-import { categoryInfo, formatMoney } from '../../lib/money';
+import { expenseCategoryLabel, formatMoney } from '../../lib/money';
 import { formatDateKey } from '../../lib/dates';
 
 type Result = {
@@ -79,8 +79,8 @@ export const GlobalSearch: React.FC<{ open: boolean; onClose: () => void }> = ({
       .map((m) => ({ id: `med-${m.id}`, kind: 'medication', title: m.name, subtitle: `${petName(m.petId)} · ${m.schedule.frequencyLabel}${m.schedule.active ? '' : ' · finished'}`, petId: m.petId, tab: 'medications' }));
 
     const expenseResults: Result[] = expenses
-      .filter((e) => matches(e.description, e.vendor, categoryInfo(e.category).label))
-      .map((e) => ({ id: `exp-${e.id}`, kind: 'expense', title: e.description || categoryInfo(e.category).label, subtitle: `${petName(e.petId)} · ${formatMoney(e.amount, user?.preferences?.currency)} · ${formatDateKey(e.date)}`, petId: e.petId, tab: 'expenses' }));
+      .filter((e) => matches(e.description, e.vendor, expenseCategoryLabel(e)))
+      .map((e) => ({ id: `exp-${e.id}`, kind: 'expense', title: e.description || expenseCategoryLabel(e), subtitle: `${petName(e.petId)} · ${formatMoney(e.amount, user?.preferences?.currency)} · ${formatDateKey(e.date)}`, petId: e.petId, tab: 'expenses' }));
 
     const docResults: Result[] = documents
       .filter((d) => matches(d.title, d.category))

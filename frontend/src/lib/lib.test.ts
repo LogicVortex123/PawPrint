@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { todayKey, addDaysToKey, addMonthsToKey, formatDateKey, isoToDateKey } from './dates';
-import { formatMoney, categoryInfo } from './money';
+import { formatMoney, categoryInfo, expenseCategoryLabel } from './money';
 import { mapBackendPet, mapBackendExpense, currentMedicationLabels, medicationLabel, weightTargetStatus } from './adapters';
 import { Medication } from '../types';
 
@@ -37,6 +37,12 @@ describe('money', () => {
     // @ts-expect-error — deliberately invalid
     expect(categoryInfo('cars').label).toBe('Other');
   });
+
+  it('labels "other" expenses with the custom category name when there is one', () => {
+    expect(expenseCategoryLabel({ category: 'other', customCategory: ' Daycare ' })).toBe('Daycare');
+    expect(expenseCategoryLabel({ category: 'other', customCategory: '' })).toBe('Other');
+    expect(expenseCategoryLabel({ category: 'vet', customCategory: 'Daycare' })).toBe('Vet visits');
+  });
 });
 
 describe('adapters', () => {
@@ -51,7 +57,7 @@ describe('adapters', () => {
 
   it('maps an expense', () => {
     expect(mapBackendExpense({ _id: 'e1', pet: 'p1', category: 'vet', amount: 10, date: '2026-01-01' }))
-      .toEqual({ id: 'e1', petId: 'p1', category: 'vet', amount: 10, date: '2026-01-01', description: '', vendor: '', appointmentId: null });
+      .toEqual({ id: 'e1', petId: 'p1', category: 'vet', customCategory: '', amount: 10, date: '2026-01-01', description: '', vendor: '', appointmentId: null });
   });
 
   it('merges tracked and free-text medications without duplicates', () => {

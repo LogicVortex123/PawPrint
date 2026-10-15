@@ -97,7 +97,7 @@ JSON bodies are capped at 1 MB; uploads at 10 MB.
 | Method | Path | Description |
 |---|---|---|
 | GET 🔒 | `/expenses?pet=&year=&category=` | Newest first |
-| POST 🔒 | `/pets/:id/expenses` | `{ amount, date, category?, description?, vendor?, appointment? }`. `category`: `vet`, `medication`, `food`, `grooming`, `insurance`, `supplies`, `training`, `boarding`, `other` |
+| POST 🔒 | `/pets/:id/expenses` | `{ amount, date, category?, customCategory?, description?, vendor?, appointment? }`. `category`: `vet`, `medication`, `food`, `grooming`, `insurance`, `supplies`, `training`, `boarding`, `other`. `customCategory` (≤ 40 chars) is the owner's own name for an `other` expense; it's dropped for any other category |
 | PUT 🔒 | `/expenses/:id` | Edit; `pet` moves it to another of the user's pets |
 | DELETE 🔒 | `/expenses/:id` | Delete |
 | GET 🔒 | `/expenses/summary?year=&pet=&date=` | `{ currency, total, count, byMonth[12], byCategory, byPet, thisMonth, lastMonth, monthlyAverage, largest }` |

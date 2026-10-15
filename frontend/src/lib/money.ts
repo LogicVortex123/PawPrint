@@ -40,3 +40,8 @@ export const EXPENSE_CATEGORIES: { value: ExpenseCategory; label: string; emoji:
 ];
 
 export const categoryInfo = (c: ExpenseCategory) => EXPENSE_CATEGORIES.find((x) => x.value === c) ?? EXPENSE_CATEGORIES[EXPENSE_CATEGORIES.length - 1];
+
+// What an expense's category reads as: the owner's own name for an "other"
+// expense when they typed one, otherwise the built-in label
+export const expenseCategoryLabel = (e: { category: ExpenseCategory; customCategory?: string }) =>
+  (e.category === 'other' && e.customCategory?.trim()) || categoryInfo(e.category).label;

@@ -22,6 +22,16 @@ describe('summarizeExpenses', () => {
     expect(s).toMatchObject({ thisMonth: 10, lastMonth: 40, total: 10 });
   });
 
+  test('custom "other" names get their own row, case-insensitively', () => {
+    const custom = (amount, name) => ({ ...e(amount, '2026-03-01', 'other'), customCategory: name });
+    const s = summarizeExpenses([custom(30, 'Daycare'), custom(20, 'daycare '), custom(5, ''), e(10, '2026-03-02', 'food')], { year: 2026, todayKey: '2026-03-10' });
+    expect(s.byCategory.map(({ category, label, total }) => ({ category, label, total }))).toEqual([
+      { category: 'other', label: 'Daycare', total: 50 },
+      { category: 'food', label: 'Food & treats', total: 10 },
+      { category: 'other', label: 'Other', total: 5 },
+    ]);
+  });
+
   test('past years average over 12 months', () => {
     expect(summarizeExpenses([e(120, '2025-06-01')], { year: 2025, todayKey: '2026-03-01' }).monthlyAverage).toBe(10);
   });

@@ -287,6 +287,7 @@ type BackendExpense = {
   _id: string;
   pet: string;
   category: ExpenseCategory;
+  customCategory?: string;
   amount: number;
   date: string;
   description?: string;
@@ -299,6 +300,7 @@ export function mapBackendExpense(be: BackendExpense): Expense {
     id: be._id,
     petId: be.pet,
     category: be.category,
+    customCategory: be.customCategory || '',
     amount: be.amount,
     date: be.date,
     description: be.description || '',

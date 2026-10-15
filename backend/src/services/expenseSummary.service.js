@@ -19,8 +19,15 @@ const CURRENCIES = ['INR', 'USD', 'EUR', 'GBP', 'AUD', 'CAD', 'SGD', 'AED', 'JPY
 const toCents = (amount) => Math.round(Number(amount) * 100);
 const fromCents = (cents) => cents / 100;
 
+// What an expense's category reads as: the owner's own name for an "other"
+// expense when they typed one, otherwise the built-in label
+function categoryLabel(expense) {
+  const custom = expense.category === 'other' && typeof expense.customCategory === 'string' ? expense.customCategory.trim() : '';
+  return custom || EXPENSE_CATEGORIES[expense.category] || expense.category;
+}
+
 /**
- * @param {{ amount: number, date: string, category: string, pet: any, _id?: any, description?: string }[]} expenses
+ * @param {{ amount: number, date: string, category: string, customCategory?: string, pet: any, _id?: any, description?: string }[]} expenses
  * @param {{ year: number, todayKey: string }} options — todayKey 'YYYY-MM-DD'
  */
 function summarizeExpenses(expenses, { year, todayKey }) {
@@ -37,10 +44,13 @@ function summarizeExpenses(expenses, { year, todayKey }) {
     totalCents += cents;
     monthCents[month] += cents;
 
-    const cat = categories.get(e.category) || { cents: 0, count: 0 };
+    // Custom "other" names get their own row; "Daycare" and "daycare" are one row
+    const label = categoryLabel(e);
+    const catKey = `${e.category}:${label.toLowerCase()}`;
+    const cat = categories.get(catKey) || { category: e.category, label, cents: 0, count: 0 };
     cat.cents += cents;
     cat.count += 1;
-    categories.set(e.category, cat);
+    categories.set(catKey, cat);
 
     const petKey = String(e.pet);
     pets.set(petKey, (pets.get(petKey) || 0) + cents);
@@ -63,15 +73,15 @@ function summarizeExpenses(expenses, { year, todayKey }) {
     total: fromCents(totalCents),
     count: inYear.length,
     byMonth: monthCents.map(fromCents),
-    byCategory: [...categories.entries()]
-      .map(([category, { cents, count }]) => ({ category, label: EXPENSE_CATEGORIES[category] || category, total: fromCents(cents), count }))
+    byCategory: [...categories.values()]
+      .map(({ category, label, cents, count }) => ({ category, label, total: fromCents(cents), count }))
       .sort((a, b) => b.total - a.total),
     byPet: Object.fromEntries([...pets.entries()].map(([pet, cents]) => [pet, fromCents(cents)])),
     thisMonth: sumMonth(thisMonthKey),
     lastMonth: sumMonth(lastMonthKey),
     monthlyAverage: monthsElapsed ? Math.round(totalCents / monthsElapsed) / 100 : 0,
     largest: largest
-      ? { id: largest._id, amount: largest.amount, description: largest.description || '', category: largest.category, date: largest.date }
+      ? { id: largest._id, amount: largest.amount, description: largest.description || '', category: largest.category, categoryLabel: categoryLabel(largest), date: largest.date }
       : null,
   };
 }
@@ -87,4 +97,4 @@ function toCsv(rows) {
   return rows.map((row) => row.map(cell).join(',')).join('\r\n');
 }
 
-module.exports = { EXPENSE_CATEGORIES, CURRENCIES, summarizeExpenses, toCsv };
+module.exports = { EXPENSE_CATEGORIES, CURRENCIES, categoryLabel, summarizeExpenses, toCsv };

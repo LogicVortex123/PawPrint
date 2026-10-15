@@ -41,6 +41,29 @@ describe('expenses', () => {
     for (const body of bad) expect((await owner.post(`/pets/${pet._id}/expenses`, body)).status).toBe(400);
   });
 
+  test('"other" expenses keep a custom category name', async () => {
+    const created = await owner.post(`/pets/${pet._id}/expenses`, { amount: 300, date: '2027-04-01', category: 'other', customCategory: '  Daycare ' });
+    expect(created.status).toBe(201);
+    expect(created.body).toMatchObject({ category: 'other', customCategory: 'Daycare' });
+    await owner.post(`/pets/${pet._id}/expenses`, { amount: 200, date: '2027-04-02', category: 'other', customCategory: 'daycare' });
+    await owner.post(`/pets/${pet._id}/expenses`, { amount: 50, date: '2027-04-03', category: 'other' });
+
+    const summary = (await owner.get('/expenses/summary?year=2027&date=2027-04-10')).body;
+    expect(summary.byCategory).toEqual([
+      expect.objectContaining({ category: 'other', label: 'Daycare', total: 500, count: 2 }),
+      expect.objectContaining({ category: 'other', label: 'Other', total: 50, count: 1 }),
+    ]);
+    expect((await owner.get('/expenses/export.csv?year=2027')).text).toContain('2027-04-01,Bruno,Daycare,,,300.00');
+
+    // Switching to a built-in category drops the custom name
+    const moved = await owner.put(`/expenses/${created.body._id}`, { category: 'boarding' });
+    expect(moved.body.category).toBe('boarding');
+    expect(moved.body.customCategory).toBeUndefined();
+
+    const tooLong = await owner.post(`/pets/${pet._id}/expenses`, { amount: 5, date: '2027-04-01', category: 'other', customCategory: 'x'.repeat(41) });
+    expect(tooLong.status).toBe(400);
+  });
+
   test('can be linked to the owner\'s own appointment only', async () => {
     const apt = (await owner.post('/appointments', { pet: pet._id, clinic: { name: 'Green Valley' }, date: '2026-03-01T10:00:00Z' })).body;
     const linked = await owner.post(`/pets/${pet._id}/expenses`, { amount: 800, date: '2026-03-01', category: 'vet', appointment: apt._id });

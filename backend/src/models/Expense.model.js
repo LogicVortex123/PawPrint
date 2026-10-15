@@ -8,6 +8,8 @@ const expenseSchema = new mongoose.Schema(
     owner: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true, index: true },
     pet: { type: mongoose.Schema.Types.ObjectId, ref: 'Pet', required: true, index: true },
     category: { type: String, enum: Object.keys(EXPENSE_CATEGORIES), required: true, default: 'other' },
+    // The owner's own name for an "other" expense (e.g. "Daycare", "Pet taxi")
+    customCategory: { type: String, trim: true, maxlength: [40, 'Category name must be 40 characters or fewer'] },
     amount: {
       type: Number,
       required: [true, 'Amount is required'],

@@ -5,7 +5,7 @@ const User = require('../models/User.model');
 const asyncHandler = require('../utils/asyncHandler');
 const ApiError = require('../utils/ApiError');
 const { findOwnedPetOrFail } = require('../services/petAccess.service');
-const { EXPENSE_CATEGORIES, summarizeExpenses, toCsv } = require('../services/expenseSummary.service');
+const { EXPENSE_CATEGORIES, categoryLabel, summarizeExpenses, toCsv } = require('../services/expenseSummary.service');
 const { isDateKey, localDateKey } = require('../services/medicationSchedule.service');
 const { pick, requireNumber, optionalString } = require('../utils/validate');
 
@@ -22,7 +22,7 @@ function yearFrom(req, todayKey) {
 
 // Validates and normalises the editable fields of an expense
 async function readExpenseFields(body, userId, { partial = false } = {}) {
-  const fields = pick(body, ['category', 'amount', 'date', 'description', 'vendor', 'appointment']);
+  const fields = pick(body, ['category', 'customCategory', 'amount', 'date', 'description', 'vendor', 'appointment']);
 
   if (!partial || fields.amount !== undefined) {
     fields.amount = Math.round(requireNumber(fields.amount, 'Amount', { min: 0, max: 10_000_000 }) * 100) / 100;
@@ -35,6 +35,8 @@ async function readExpenseFields(body, userId, { partial = false } = {}) {
   if (fields.category !== undefined && !EXPENSE_CATEGORIES[fields.category]) throw new ApiError(400, 'Unknown expense category');
   if (fields.description !== undefined) fields.description = optionalString(fields.description, 'Description', { max: 120 });
   if (fields.vendor !== undefined) fields.vendor = optionalString(fields.vendor, 'Where', { max: 120 });
+  // A blank custom name means plain "Other" — unset it rather than storing ''
+  if (fields.customCategory !== undefined) fields.customCategory = optionalString(fields.customCategory, 'Category name', { max: 40 }) || undefined;
 
   // Linking to an appointment only works for the user's own appointments
   if (fields.appointment) {
@@ -45,6 +47,11 @@ async function readExpenseFields(body, userId, { partial = false } = {}) {
     fields.appointment = undefined;
   }
   return fields;
+}
+
+// A custom name only belongs to "other" — switching to a built-in category drops it
+function keepCustomCategoryForOther(expense) {
+  if (expense.category !== 'other') expense.customCategory = undefined;
 }
 
 // GET /expenses?pet=&year=&category= — newest first
@@ -65,7 +72,9 @@ const list = asyncHandler(async (req, res) => {
 const createForPet = asyncHandler(async (req, res) => {
   await findOwnedPetOrFail(req.params.id, req.userId);
   const fields = await readExpenseFields(req.body, req.userId);
-  const expense = await Expense.create({ category: 'other', ...fields, pet: req.params.id, owner: req.userId });
+  const expense = new Expense({ category: 'other', ...fields, pet: req.params.id, owner: req.userId });
+  keepCustomCategoryForOther(expense);
+  await expense.save();
   res.status(201).json(expense);
 });
 
@@ -84,6 +93,7 @@ const update = asyncHandler(async (req, res) => {
     expense.pet = req.body.pet;
   }
   Object.assign(expense, fields);
+  keepCustomCategoryForOther(expense);
   await expense.save();
   res.json(expense);
 });
@@ -108,7 +118,7 @@ const summary = asyncHandler(async (req, res) => {
   query.date = { $gte: `${Math.min(year, Number(todayKey.slice(0, 4))) - 1}-12-01` };
 
   const [expenses, user] = await Promise.all([
-    Expense.find(query).select('amount date category pet description').lean(),
+    Expense.find(query).select('amount date category customCategory pet description').lean(),
     User.findById(req.userId).select('preferences.currency').lean(),
   ]);
   res.json({ currency: user?.preferences?.currency || 'INR', ...summarizeExpenses(expenses, { year, todayKey }) });
@@ -129,7 +139,7 @@ const exportCsv = asyncHandler(async (req, res) => {
 
   const csv = toCsv([
     ['Date', 'Pet', 'Category', 'Description', 'Where', `Amount (${currency})`],
-    ...expenses.map((e) => [e.date, petName.get(String(e.pet)) || '', EXPENSE_CATEGORIES[e.category] || e.category, e.description || '', e.vendor || '', e.amount.toFixed(2)]),
+    ...expenses.map((e) => [e.date, petName.get(String(e.pet)) || '', categoryLabel(e), e.description || '', e.vendor || '', e.amount.toFixed(2)]),
   ]);
 
   const suffix = req.query.year ? `-${yearFrom(req, todayFrom(req))}` : '';
