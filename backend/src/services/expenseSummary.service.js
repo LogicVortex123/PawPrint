@@ -44,10 +44,12 @@ function summarizeExpenses(expenses, { year, todayKey }) {
     totalCents += cents;
     monthCents[month] += cents;
 
-    // Custom "other" names get their own row; "Daycare" and "daycare" are one row
+    // Custom "other" names get their own row; "Daycare" and "daycare" are one
+    // row, named the way the owner first typed it (whatever order these come in)
     const label = categoryLabel(e);
     const catKey = `${e.category}:${label.toLowerCase()}`;
-    const cat = categories.get(catKey) || { category: e.category, label, cents: 0, count: 0 };
+    const cat = categories.get(catKey) || { category: e.category, label, firstDate: e.date, cents: 0, count: 0 };
+    if (e.date < cat.firstDate) { cat.label = label; cat.firstDate = e.date; }
     cat.cents += cents;
     cat.count += 1;
     categories.set(catKey, cat);
