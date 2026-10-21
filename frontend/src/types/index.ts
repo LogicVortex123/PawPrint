@@ -73,7 +73,12 @@ export interface Clinic {
   hours: string;
   isFavorite: boolean;
   emergency24_7: boolean;
+  latitude: number | null;
+  longitude: number | null;
+  website: string;
 }
+
+export type ClinicFilter = 'all' | 'favorites' | 'emergency';
 
 export type DocumentCategory = 'Prescription' | 'Medical Report' | 'Insurance' | 'Adoption';
 

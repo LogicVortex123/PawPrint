@@ -45,7 +45,7 @@ export const Analytics: React.FC = () => {
             {petsLoading ? 'Just a moment.' : 'Add a pet profile first to see health analytics here.'}
           </p>
           {!petsLoading && (
-            <Link to="/features" className="inline-block px-6 py-3 rounded-full text-sm font-bold text-white bg-paw-forest hover:bg-paw-deep shadow-soft transition-all">
+            <Link to="/dashboard" className="inline-block px-6 py-3 rounded-full text-sm font-bold text-white bg-paw-forest hover:bg-paw-deep shadow-soft transition-all">
               Add Your First Pet
             </Link>
           )}
@@ -346,7 +346,7 @@ export const Analytics: React.FC = () => {
                   <div className="text-[11px] font-bold uppercase tracking-wider text-paw-secondary dark:text-paw-warm-sage">{year} so far</div>
                   <div className="text-2xl font-extrabold text-paw-dark dark:text-white">{formatMoney(yearTotal, currency)}</div>
                 </div>
-                <Link to={`/features?pet=${pet.id}&tab=expenses`} className="text-sm font-bold text-paw-forest dark:text-paw-sage hover:underline whitespace-nowrap">View expenses →</Link>
+                <Link to={`/dashboard?pet=${pet.id}&tab=expenses`} className="text-sm font-bold text-paw-forest dark:text-paw-sage hover:underline whitespace-nowrap">View expenses →</Link>
               </div>
             </div>
           );

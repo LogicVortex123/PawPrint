@@ -15,6 +15,7 @@ import {
   MedicationInput,
   Expense,
   ExpenseInput,
+  ClinicFilter,
 } from '../types';
 import { apiRequest, apiUpload, apiDownload } from '../lib/api';
 import { StorageKeys, readJson, readString, writeJson, writeString, removeKey, clearAccountData } from '../lib/storage';
@@ -25,6 +26,7 @@ import {
   mapBackendAppointment,
   mapBackendDocument,
   mapBackendClinic,
+  type BackendClinic,
   mapBackendMedication,
   mapBackendExpense,
 } from '../lib/adapters';
@@ -173,10 +175,20 @@ interface AppState {
   fetchReminders: () => Promise<void>;
 
   // Clinics — real backend data (GET /clinics/nearby)
+  // Paged for infinite scroll: fetchClinics loads page 1, loadMoreClinics the next
   clinics: Clinic[];
   clinicsLoading: boolean;
+  clinicsLoadingMore: boolean;
   clinicsError: string | null;
-  fetchClinics: (lat?: number, lng?: number) => Promise<void>;
+  clinicsPage: number;
+  clinicsHasMore: boolean;
+  clinicsTotal: number;
+  clinicsCounts: Record<ClinicFilter, number>;
+  // True while real clinics for the area are still being looked up on the server
+  clinicsSyncing: boolean;
+  fetchClinics: (lat?: number, lng?: number, filter?: ClinicFilter) => Promise<void>;
+  loadMoreClinics: () => Promise<void>;
+  refreshClinics: () => Promise<void>;
   favoriteClinicIds: string[];
   toggleFavoriteClinic: (id: string) => void;
 
@@ -322,6 +334,33 @@ function buildTimeline({ vaccinations, weightRecords, appointments, documents }:
 const { user: storedUser, token: storedToken } = getStoredAuth();
 const initialThemePreference = getInitialThemePreference();
 const cachedRecords = storedToken ? getCachedRecords(storedUser?.id) : null;
+
+// ── Nearby clinics paging (module state: the query the current list belongs to) ──
+const CLINICS_PAGE = 6;
+// The "loading more" state stays up at least this long, so each new batch is
+// clearly announced rather than flickering in
+const CLINICS_MIN_LOAD_MS = 1200;
+let clinicsQuery: { lat?: number; lng?: number; filter: ClinicFilter } = { filter: 'all' };
+let clinicsRequest = 0; // bumps on every new search so late answers for old ones are ignored
+
+type ClinicsPage = { clinics: BackendClinic[]; page: number; total: number; hasMore: boolean; counts: Record<ClinicFilter, number>; syncing: boolean };
+
+function requestClinicsPage(token: string, page: number, limit: number) {
+  const { lat, lng, filter } = clinicsQuery;
+  const params = new URLSearchParams({ page: String(page), limit: String(limit), filter });
+  if (lat !== undefined && lng !== undefined) { params.set('lat', String(lat)); params.set('lng', String(lng)); }
+  return apiRequest<ClinicsPage>(`/clinics/nearby?${params}`, { token });
+}
+
+const clinicsPageState = (res: ClinicsPage) => ({
+  clinicsPage: res.page,
+  clinicsHasMore: res.hasMore,
+  clinicsTotal: res.total,
+  clinicsCounts: res.counts,
+  clinicsSyncing: res.syncing,
+});
+
+const withFavorite = (favoriteIds: string[]) => (c: Clinic) => ({ ...c, isFavorite: c.isFavorite || favoriteIds.includes(c.id) });
 
 export const useAppStore = create<AppState>((set, get) => {
   // Recompute the timeline after any record change
@@ -479,7 +518,7 @@ export const useAppStore = create<AppState>((set, get) => {
     deleteAccount: async (confirmEmail) => {
       const token = requireToken();
       await apiRequest('/auth/me', { method: 'DELETE', token, body: { confirmEmail } });
-      get().logout();
+      // The caller signs out once it has left the protected page
     },
 
     sendTestReminderEmail: async () => {
@@ -936,24 +975,67 @@ export const useAppStore = create<AppState>((set, get) => {
       scheduleRemindersRefresh();
     },
 
-    // ── Clinics (real backend data) ──
+    // ── Clinics (real backend data, paged) ──
     clinics: [],
     clinicsLoading: false,
+    clinicsLoadingMore: false,
     clinicsError: null,
-    fetchClinics: async (lat, lng) => {
+    clinicsPage: 0,
+    clinicsHasMore: false,
+    clinicsTotal: 0,
+    clinicsCounts: { all: 0, favorites: 0, emergency: 0 },
+    clinicsSyncing: false,
+
+    fetchClinics: async (lat, lng, filter = 'all') => {
       const { token } = get();
       if (!token) return;
+      clinicsQuery = { lat, lng, filter };
+      const request = ++clinicsRequest;
       set({ clinicsLoading: true, clinicsError: null });
       try {
-        const query = lat !== undefined && lng !== undefined ? `?lat=${lat}&lng=${lng}` : '';
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const raw = await apiRequest<any[]>(`/clinics/nearby${query}`, { token });
-        const favorites = get().favoriteClinicIds;
-        const clinics = raw.map(mapBackendClinic).map((c) => ({ ...c, isFavorite: c.isFavorite || favorites.includes(c.id) }));
-        set({ clinics, clinicsLoading: false });
+        const res = await requestClinicsPage(token, 1, CLINICS_PAGE);
+        if (request !== clinicsRequest) return; // a newer search replaced this one
+        set({ ...clinicsPageState(res), clinics: res.clinics.map(mapBackendClinic).map(withFavorite(get().favoriteClinicIds)), clinicsLoading: false });
       } catch (err: unknown) {
-        const msg = err instanceof Error ? err.message : 'Could not load nearby clinics';
-        set({ clinicsLoading: false, clinicsError: msg });
+        if (request !== clinicsRequest) return;
+        set({ clinicsLoading: false, clinicsError: err instanceof Error ? err.message : 'Could not load nearby clinics' });
+      }
+    },
+
+    loadMoreClinics: async () => {
+      const { token, clinicsHasMore, clinicsLoading, clinicsLoadingMore, clinicsPage } = get();
+      if (!token || !clinicsHasMore || clinicsLoading || clinicsLoadingMore) return;
+      const request = clinicsRequest;
+      set({ clinicsLoadingMore: true });
+      try {
+        const [res] = await Promise.all([
+          requestClinicsPage(token, clinicsPage + 1, CLINICS_PAGE),
+          new Promise((resolve) => setTimeout(resolve, CLINICS_MIN_LOAD_MS)),
+        ]);
+        if (request !== clinicsRequest) return;
+        const known = new Set(get().clinics.map((c) => c.id));
+        const more = res.clinics.map(mapBackendClinic).filter((c) => !known.has(c.id)).map(withFavorite(get().favoriteClinicIds));
+        set((state) => ({ ...clinicsPageState(res), clinics: [...state.clinics, ...more], clinicsLoadingMore: false }));
+      } catch (err: unknown) {
+        if (request !== clinicsRequest) return;
+        set({ clinicsLoadingMore: false });
+        get().showToast(`❌ ${err instanceof Error ? err.message : 'Could not load more clinics.'}`);
+      }
+    },
+
+    // Re-reads everything loaded so far in one go — used once the server has
+    // finished finding real clinics for the area, so they slot in by distance
+    refreshClinics: async () => {
+      const { token, clinics } = get();
+      if (!token) return;
+      const request = clinicsRequest;
+      try {
+        const res = await requestClinicsPage(token, 1, Math.min(Math.max(clinics.length, CLINICS_PAGE), 100));
+        if (request !== clinicsRequest) return;
+        const pages = Math.max(1, Math.ceil(res.clinics.length / CLINICS_PAGE));
+        set({ ...clinicsPageState({ ...res, page: pages, hasMore: res.total > res.clinics.length }), clinics: res.clinics.map(mapBackendClinic).map(withFavorite(get().favoriteClinicIds)) });
+      } catch {
+        // Keep showing what's already there
       }
     },
 
@@ -967,6 +1049,7 @@ export const useAppStore = create<AppState>((set, get) => {
       const applyFavorites = (ids: string[]) => set((state) => ({
         favoriteClinicIds: ids,
         clinics: state.clinics.map((c) => ({ ...c, isFavorite: ids.includes(c.id) })),
+        clinicsCounts: { ...state.clinicsCounts, favorites: Math.max(0, state.clinicsCounts.favorites + ids.length - state.favoriteClinicIds.length) },
         user: state.user ? { ...state.user, favoriteClinicIds: ids } : state.user,
       }));
 

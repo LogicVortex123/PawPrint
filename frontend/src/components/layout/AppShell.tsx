@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { Link, useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 import {
-  Search, Menu, X, BarChart3, Settings as SettingsIcon, Siren, Plus, ChevronsUpDown, Check, MoreHorizontal, Home,
+  Search, Menu, X, BarChart3, Settings as SettingsIcon, Siren, Plus, ChevronsUpDown, Check, MoreHorizontal,
 } from 'lucide-react';
 import { useAppStore } from '../../store/useAppStore';
 import { Brand, AccountMenu } from '../common/Navbar';
@@ -16,8 +16,8 @@ function useCurrentPage() {
   const { pathname } = useLocation();
   const [params] = useSearchParams();
   const tabParam = params.get('tab');
-  const tab: DashboardTab | null = pathname === '/features' ? (isDashboardTab(tabParam) ? tabParam : 'overview') : null;
-  const title = tab ? SECTIONS[tab].label : pathname.startsWith('/analytics') ? 'Health Insights' : pathname.startsWith('/settings') ? 'Account Settings' : 'PawPrint';
+  const tab: DashboardTab | null = pathname === '/dashboard' ? (isDashboardTab(tabParam) ? tabParam : 'overview') : null;
+  const title = tab ? SECTIONS[tab].label : pathname.startsWith('/analytics') ? 'Health Insights' : pathname.startsWith('/settings') ? 'Account Settings' : pathname.startsWith('/emergency') ? 'Emergency Mode' : pathname.startsWith('/pets/') ? 'Health Summary' : 'PawPrint';
   return { pathname, tab, title };
 }
 
@@ -28,7 +28,7 @@ function usePetSwitch() {
   const [, setSearchParams] = useSearchParams();
   return (id: string) => {
     setSelectedPetId(id);
-    if (pathname === '/features') {
+    if (pathname === '/dashboard') {
       setSearchParams((prev) => { const next = new URLSearchParams(prev); next.set('pet', id); return next; }, { replace: true });
     }
   };
@@ -101,9 +101,14 @@ const SidebarContent: React.FC<{ onNavigate?: () => void; onAddPet: () => void }
   const petId = selectedPetId || undefined;
 
   const linkCls = (active: boolean) =>
-    `group flex items-center gap-3 px-2.5 py-1.5 rounded-2xl text-sm font-semibold transition-all duration-200 ${active
+    `group relative flex items-center gap-3 px-2.5 py-1.5 rounded-2xl text-sm font-semibold transition-all duration-200 ${active
       ? 'bg-white dark:bg-paw-darkcard text-paw-dark dark:text-white shadow-card'
-      : 'text-paw-secondary dark:text-paw-warm-sage/80 hover:text-paw-dark dark:hover:text-white hover:bg-white/60 dark:hover:bg-paw-darkcard/50'}`;
+      : 'text-paw-secondary dark:text-paw-warm-sage/80 hover:text-paw-dark dark:hover:text-white hover:bg-white/60 dark:hover:bg-paw-darkcard/50 hover:translate-x-0.5'}`;
+
+  // Accent bar on the left edge of the active link
+  const activeBar = (active: boolean) => (
+    <span aria-hidden className={`absolute -left-3 top-1/2 -translate-y-1/2 w-1 rounded-r-full bg-paw-forest dark:bg-paw-sage transition-all duration-300 ease-out ${active ? 'h-6 opacity-100' : 'h-0 opacity-0'}`} />
+  );
 
   return (
     <div className="flex flex-col h-full">
@@ -122,12 +127,16 @@ const SidebarContent: React.FC<{ onNavigate?: () => void; onAddPet: () => void }
                 const active = tab === id;
                 return (
                   <Link key={id} to={dashboardHref(id, petId)} onClick={onNavigate} className={linkCls(active)} aria-current={active ? 'page' : undefined}>
-                    <span className={`w-7 h-7 rounded-lg flex items-center justify-center transition-colors ${active ? TONES[s.tone].tile : 'group-hover:scale-110 transition-transform'}`}>
+                    {activeBar(active)}
+                    <span className={`w-7 h-7 rounded-lg flex items-center justify-center transition-all duration-300 ${active ? `${TONES[s.tone].tile} scale-105` : 'group-hover:scale-110 group-hover:-rotate-6'}`}>
                       <Icon className="w-[18px] h-[18px]" />
                     </span>
                     <span className="flex-1">{s.label}</span>
                     {id === 'reminders' && actionCount > 0 && (
-                      <span className="min-w-[20px] h-5 px-1.5 rounded-full bg-orange-500 text-white text-[10px] font-extrabold flex items-center justify-center">{actionCount}</span>
+                      <span className="relative min-w-[20px] h-5 px-1.5 rounded-full bg-orange-500 text-white text-[10px] font-extrabold flex items-center justify-center">
+                        <span className="absolute inset-0 rounded-full bg-orange-500 animate-ping opacity-40 [animation-duration:2s]" aria-hidden />
+                        <span className="relative">{actionCount}</span>
+                      </span>
                     )}
                   </Link>
                 );
@@ -138,10 +147,12 @@ const SidebarContent: React.FC<{ onNavigate?: () => void; onAddPet: () => void }
         <div>
           <div className="px-3 pb-1.5 text-[10px] font-extrabold uppercase tracking-[0.16em] text-paw-secondary/70 dark:text-paw-warm-sage/50">Account</div>
           <Link to="/analytics" onClick={onNavigate} className={linkCls(pathname.startsWith('/analytics'))}>
+            {activeBar(pathname.startsWith('/analytics'))}
             <span className={`w-7 h-7 rounded-lg flex items-center justify-center ${pathname.startsWith('/analytics') ? TONES.teal.tile : ''}`}><BarChart3 className="w-[18px] h-[18px]" /></span>
             Health Insights
           </Link>
           <Link to="/settings" onClick={onNavigate} className={linkCls(pathname.startsWith('/settings'))}>
+            {activeBar(pathname.startsWith('/settings'))}
             <span className={`w-7 h-7 rounded-lg flex items-center justify-center ${pathname.startsWith('/settings') ? TONES.slate.tile : ''}`}><SettingsIcon className="w-[18px] h-[18px]" /></span>
             Settings
           </Link>
@@ -151,8 +162,8 @@ const SidebarContent: React.FC<{ onNavigate?: () => void; onAddPet: () => void }
       <div className="p-3 space-y-2.5 border-t border-paw-line/80 dark:border-paw-darkborder">
         {selectedPetId && (
           <Link to={`/emergency?pet=${selectedPetId}`} onClick={onNavigate}
-            className="flex items-center gap-3 px-4 py-2.5 rounded-2xl bg-gradient-to-r from-rose-600 to-red-500 text-white shadow-soft hover:shadow-soft-lg hover:-translate-y-0.5 transition-all">
-            <Siren className="w-5 h-5" />
+            className="group btn-shine flex items-center gap-3 px-4 py-2.5 rounded-2xl bg-gradient-to-r from-rose-600 to-red-500 text-white shadow-soft hover:shadow-soft-lg hover:-translate-y-0.5 transition-all">
+            <Siren className="w-5 h-5 group-hover:animate-wiggle" />
             <span className="flex-1">
               <span className="block text-sm font-extrabold leading-tight">Emergency Mode</span>
               <span className="block text-[11px] text-white/80">Key info in one tap</span>
@@ -161,10 +172,7 @@ const SidebarContent: React.FC<{ onNavigate?: () => void; onAddPet: () => void }
         )}
         <div className="flex items-center justify-between gap-2">
           <AccountMenu align="left" up />
-          <div className="flex items-center gap-1">
-            <Link to="/" onClick={onNavigate} className="icon-btn" title="Home page" aria-label="Home page"><Home className="w-4 h-4" /></Link>
-            <ThemeToggle />
-          </div>
+          <ThemeToggle />
         </div>
       </div>
     </div>
@@ -213,13 +221,14 @@ export const AppShell: React.FC<{ children: React.ReactNode }> = ({ children }) 
         </div>
       )}
 
-      <div className="lg:pl-72 flex flex-col min-h-screen">
+      <div className="lg:pl-72 print:pl-0 flex flex-col min-h-screen">
         {/* Top bar */}
         <header className="print:hidden sticky top-0 z-30 bg-paw-mist/85 dark:bg-paw-darkbg/85 backdrop-blur-md border-b border-paw-line/70 dark:border-paw-darkborder/70">
           <div className="flex items-center gap-3 h-16 px-4 sm:px-6 lg:px-8">
             <button onClick={() => setDrawerOpen(true)} className="icon-btn lg:hidden" aria-label="Open menu"><Menu className="w-5 h-5" /></button>
-            <div className="flex items-center gap-2.5 min-w-0 flex-1">
-              {section && <span className={`hidden sm:inline-flex w-8 h-8 rounded-xl items-center justify-center ${TONES[section.tone].tile}`}><section.icon className="w-4 h-4" /></span>}
+            {/* Keyed by title so the heading eases in when the section changes */}
+            <div key={title} className="flex items-center gap-2.5 min-w-0 flex-1 animate-fadeIn">
+              {section && <span className={`hidden sm:inline-flex w-8 h-8 rounded-xl items-center justify-center animate-pop ${TONES[section.tone].tile}`}><section.icon className="w-4 h-4" /></span>}
               <div className="min-w-0">
                 <div className="text-[11px] font-semibold text-paw-secondary dark:text-paw-warm-sage truncate">
                   {pet ? <>Caring for <span className="font-bold text-paw-dark dark:text-white">{pet.name}</span></> : 'Welcome to PawPrint'}
@@ -238,7 +247,7 @@ export const AppShell: React.FC<{ children: React.ReactNode }> = ({ children }) 
           </div>
         </header>
 
-        <main className="flex-1 px-4 sm:px-6 lg:px-8 py-6 lg:py-8 pb-28 lg:pb-10">
+        <main className="flex-1 px-4 sm:px-6 lg:px-8 py-6 lg:py-8 pb-28 lg:pb-28 print:p-0">
           <div className="max-w-6xl mx-auto">{children}</div>
         </main>
       </div>
@@ -252,8 +261,8 @@ export const AppShell: React.FC<{ children: React.ReactNode }> = ({ children }) 
             const active = tab === id;
             return (
               <Link key={id} to={dashboardHref(id, selectedPetId || undefined)}
-                className={`relative flex-1 flex flex-col items-center gap-0.5 py-1.5 rounded-2xl text-[10px] font-bold transition-colors ${active ? `${TONES[s.tone].tile}` : 'text-paw-secondary dark:text-paw-warm-sage'}`}>
-                <Icon className="w-5 h-5" />
+                className={`relative flex-1 flex flex-col items-center gap-0.5 py-1.5 rounded-2xl text-[10px] font-bold transition-colors duration-300 ${active ? `${TONES[s.tone].tile}` : 'text-paw-secondary dark:text-paw-warm-sage'}`}>
+                <Icon className={`w-5 h-5 ${active ? 'animate-pop' : ''}`} />
                 {s.short}
                 {id === 'reminders' && actionCount > 0 && <span className="absolute top-1 right-[calc(50%-18px)] w-2 h-2 rounded-full bg-orange-500 ring-2 ring-white dark:ring-paw-darkcard" />}
               </Link>

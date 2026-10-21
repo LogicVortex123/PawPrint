@@ -13,6 +13,7 @@ export const StorageKeys = {
   selectedPet: `${PREFIX}selected-pet`,
   recentSearches: `${PREFIX}recent-searches`,
   notifiedReminders: `${PREFIX}notified-reminders`,
+  chat: `${PREFIX}chat`,
   draftPrefix: `${PREFIX}draft:`,
 } as const;
 
@@ -71,5 +72,5 @@ export function clearAccountData(): void {
   } catch {
     // ignore
   }
-  [StorageKeys.token, StorageKeys.user, StorageKeys.recordsCache, StorageKeys.selectedPet, StorageKeys.recentSearches, StorageKeys.notifiedReminders].forEach(removeKey);
+  [StorageKeys.token, StorageKeys.user, StorageKeys.recordsCache, StorageKeys.selectedPet, StorageKeys.recentSearches, StorageKeys.notifiedReminders, StorageKeys.chat].forEach(removeKey);
 }

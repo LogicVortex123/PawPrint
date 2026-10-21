@@ -1,13 +1,14 @@
 import React, { Suspense, lazy, useEffect } from 'react';
 import { Routes, Route, Navigate, useLocation } from 'react-router-dom';
-import { Loader2 } from 'lucide-react';
 import { Navbar } from './components/common/Navbar';
 import { Footer } from './components/common/Footer';
 import { Toast } from './components/common/Toast';
 import { ErrorBoundary } from './components/common/ErrorBoundary';
 import { GlobalEffects } from './components/common/GlobalEffects';
 import { AppShell } from './components/layout/AppShell';
+import { BackToTop, PawLoader, ScrollProgress, useSpotlightTracker } from './components/common/Motion';
 import { Home } from './pages/Home';
+import { ChatWidget } from './components/chat/ChatWidget';
 import { useAppStore } from './store/useAppStore';
 
 // Every page except the landing page is loaded on demand, so the first visit
@@ -29,15 +30,10 @@ const ResetPassword = page(() => import('./pages/ResetPassword'), 'ResetPassword
 const SharedRecord = page(() => import('./pages/SharedRecord'), 'SharedRecord');
 const NotFound = page(() => import('./pages/NotFound'), 'NotFound');
 
-const PageLoader = () => (
-  <div className="py-32 flex flex-col items-center gap-3 text-paw-secondary dark:text-paw-warm-sage" role="status" aria-label="Loading page">
-    <Loader2 className="w-7 h-7 animate-spin text-paw-forest dark:text-paw-sage" />
-    <span className="text-xs font-semibold">Fetching treats…</span>
-  </div>
-);
+const PageLoader = () => <PawLoader className="py-32" />;
 
 // Signed-in app pages use the sidebar layout; everything else gets the public navbar + footer
-const APP_PATHS = ['/features', '/analytics', '/settings'];
+const APP_PATHS = ['/dashboard', '/analytics', '/settings', '/emergency', '/pets/'];
 
 function ScrollToTop() {
   const { pathname, hash } = useLocation();
@@ -70,9 +66,26 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
   return <>{children}</>;
 }
 
+// Landing and sign-in pages are for visitors. Someone already signed in goes
+// straight to their dashboard (or the page a ?redirect= link asked for).
+export function GuestRoute({ children }: { children: React.ReactNode }) {
+  const { isAuthenticated } = useAppStore();
+  const { search } = useLocation();
+  if (!isAuthenticated) return <>{children}</>;
+  const redirect = new URLSearchParams(search).get('redirect') || '';
+  return <Navigate to={redirect.startsWith('/') && !redirect.startsWith('//') ? redirect : '/dashboard'} replace />;
+}
+
+// Old dashboard address (/features?tab=…) still works, query string and all
+function LegacyDashboardRedirect() {
+  const { search } = useLocation();
+  return <Navigate to={`/dashboard${search}`} replace />;
+}
+
 export const App: React.FC = () => {
   const { theme, isAuthenticated, fetchPets, fetchMe } = useAppStore();
   const { pathname } = useLocation();
+  useSpotlightTracker();
 
   useEffect(() => {
     document.documentElement.classList.toggle('dark', theme === 'dark');
@@ -93,24 +106,27 @@ export const App: React.FC = () => {
   const routes = (
     <ErrorBoundary resetKey={pathname}>
       <Suspense fallback={<PageLoader />}>
+        {/* Keyed by path so each page eases in when you navigate to it */}
+        <div key={pathname} className="animate-page-in">
         <Routes>
-          <Route path="/" element={<Home />} />
-          <Route path="/features" element={<ProtectedRoute><Features /></ProtectedRoute>} />
-          <Route path="/dashboard" element={<Navigate to="/features" replace />} />
+          <Route path="/" element={<GuestRoute><Home /></GuestRoute>} />
+          <Route path="/dashboard" element={<ProtectedRoute><Features /></ProtectedRoute>} />
+          <Route path="/features" element={<LegacyDashboardRedirect />} />
           <Route path="/about" element={<About />} />
           <Route path="/roadmap" element={<Roadmap />} />
           <Route path="/analytics" element={<ProtectedRoute><Analytics /></ProtectedRoute>} />
           <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
           <Route path="/emergency" element={<ProtectedRoute><EmergencyMode /></ProtectedRoute>} />
           <Route path="/pets/:petId/summary" element={<ProtectedRoute><HealthSummary /></ProtectedRoute>} />
-          <Route path="/login" element={<Login />} />
-          <Route path="/signup" element={<Signup />} />
-          <Route path="/forgot-password" element={<ForgotPassword />} />
+          <Route path="/login" element={<GuestRoute><Login /></GuestRoute>} />
+          <Route path="/signup" element={<GuestRoute><Signup /></GuestRoute>} />
+          <Route path="/forgot-password" element={<GuestRoute><ForgotPassword /></GuestRoute>} />
           <Route path="/reset-password" element={<ResetPassword />} />
           {/* Public, read-only record a vet/sitter opens from a shared link */}
           <Route path="/share/:token" element={<SharedRecord />} />
           <Route path="*" element={<NotFound />} />
         </Routes>
+        </div>
       </Suspense>
     </ErrorBoundary>
   );
@@ -127,11 +143,15 @@ export const App: React.FC = () => {
         <AppShell>{routes}</AppShell>
       ) : (
         <>
+          {!bare && <ScrollProgress />}
           {!bare && <Navbar />}
           <main className="flex-grow">{routes}</main>
           {!bare && <Footer />}
+          {!bare && <BackToTop />}
         </>
       )}
+      {/* PawPal is everywhere except the sign-in screens and a vet's shared view */}
+      {!bare && !pathname.startsWith('/share/') && <ChatWidget />}
       <Toast />
     </div>
   );

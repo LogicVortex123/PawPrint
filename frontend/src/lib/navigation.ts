@@ -61,4 +61,4 @@ export const isDashboardTab = (value: string | null): value is DashboardTab =>
   !!value && (DASHBOARD_TABS as readonly string[]).includes(value);
 
 export const dashboardHref = (tab: DashboardTab, petId?: string) =>
-  `/features?tab=${tab}${petId ? `&pet=${petId}` : ''}`;
+  `/dashboard?tab=${tab}${petId ? `&pet=${petId}` : ''}`;

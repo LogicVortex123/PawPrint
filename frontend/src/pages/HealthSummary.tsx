@@ -18,7 +18,7 @@ export const HealthSummary: React.FC = () => {
   if (!pet) {
     return (
       <div className="py-20 px-4 text-center text-paw-secondary dark:text-paw-warm-sage">
-        {petsLoading ? 'Loading…' : <>Pet not found. <Link to="/features" className="font-bold text-paw-forest underline">Back to dashboard</Link></>}
+        {petsLoading ? 'Loading…' : <>Pet not found. <Link to="/dashboard" className="font-bold text-paw-forest underline">Back to dashboard</Link></>}
       </div>
     );
   }
@@ -41,7 +41,7 @@ export const HealthSummary: React.FC = () => {
     <div className="py-8 px-4 print:p-0">
       {/* Toolbar — not printed */}
       <div className="max-w-3xl mx-auto mb-6 flex flex-wrap items-center justify-between gap-3 print:hidden">
-        <Link to={`/features?pet=${pet.id}`} className="inline-flex items-center gap-1.5 text-sm font-bold text-paw-forest dark:text-paw-sage hover:underline">
+        <Link to={`/dashboard?pet=${pet.id}`} className="inline-flex items-center gap-1.5 text-sm font-bold text-paw-forest dark:text-paw-sage hover:underline">
           <ArrowLeft className="w-4 h-4" /> Back to dashboard
         </Link>
         <div className="flex flex-wrap gap-2">

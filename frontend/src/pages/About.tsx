@@ -2,6 +2,7 @@ import React from 'react';
 import { Link } from 'react-router-dom';
 import { Heart, ShieldCheck, Sparkles, FileWarning, Clock3, Scale, CheckCircle2, ArrowRight } from 'lucide-react';
 import { Reveal, IconTile } from '../components/ui';
+import { FloatingPaws, parallax, useParallax } from '../components/common/Motion';
 
 const PROBLEMS = [
   { icon: FileWarning, text: 'Vaccination certificates lost in drawers or buried in old email threads.' },
@@ -22,26 +23,29 @@ const VALUES = [
   { icon: Sparkles, tone: 'amber' as const, title: 'Genuinely useful', text: 'Every feature exists because pet parents asked “how do I keep track of…?”.' },
 ];
 
-export const About: React.FC = () => (
+export const About: React.FC = () => {
+  const visualRef = useParallax<HTMLDivElement>();
+  return (
   <div className="relative overflow-hidden">
     <div className="absolute -top-24 -left-24 w-[28rem] h-[28rem] bg-emerald-100/70 dark:bg-emerald-500/5 rounded-full blur-3xl animate-blob" aria-hidden />
+    <FloatingPaws count={5} />
 
     {/* Hero */}
     <section className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-12 pb-20 grid lg:grid-cols-2 gap-12 items-center">
       <div className="stagger">
         <span className="eyebrow text-paw-forest dark:text-paw-sage">Our story</span>
         <h1 className="mt-4 font-display text-5xl sm:text-6xl font-semibold tracking-tight text-paw-dark dark:text-white leading-[1.05]">
-          Built from the heart, <span className="text-gradient">because they’re family.</span>
+          Built from the heart, <span className="text-gradient-flow">because they’re family.</span>
         </h1>
         <p className="mt-6 text-lg text-paw-secondary dark:text-paw-warm-sage leading-relaxed max-w-xl">
           PawPrint started with a simple thought: our pets give us unconditional love every day. Looking after their health should feel just as loving, organised and reliable.
         </p>
-        <Link to="/signup" className="btn-primary btn-lg mt-8 group">Join PawPrint <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" /></Link>
+        <Link to="/signup" className="btn-primary btn-lg mt-8 group w-fit">Join PawPrint <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" /></Link>
       </div>
-      <div className="relative h-[26rem] sm:h-[30rem]">
-        <img src="/images/dog-samoyed.webp" alt="A smiling Samoyed" className="absolute right-0 top-0 w-[58%] h-[78%] object-cover rounded-[2.5rem] shadow-soft-2xl rotate-[3deg] animate-float-slow" />
-        <img src="/images/cat-ginger.webp" alt="A ginger cat resting" className="absolute left-0 bottom-0 w-[50%] h-[62%] object-cover rounded-[2.5rem] shadow-soft-2xl ring-8 ring-paw-cream dark:ring-paw-darkbg rotate-[-4deg] animate-float-reverse" />
-        <div className="absolute left-[30%] top-[8%] glass-card rounded-2xl px-4 py-3 shadow-soft-xl border border-white/60 dark:border-paw-darkborder animate-float-delayed">
+      <div ref={visualRef} className="relative h-[26rem] sm:h-[30rem]">
+        <img style={parallax(8)} src="/images/dog-samoyed.webp" alt="A smiling Samoyed" className="absolute right-0 top-0 w-[58%] h-[78%] object-cover rounded-[2.5rem] shadow-soft-2xl rotate-[3deg] animate-float-slow" />
+        <img style={parallax(16)} src="/images/cat-ginger.webp" alt="A ginger cat resting" className="absolute left-0 bottom-0 w-[50%] h-[62%] object-cover rounded-[2.5rem] shadow-soft-2xl ring-8 ring-paw-cream dark:ring-paw-darkbg rotate-[-4deg] animate-float-reverse" />
+        <div style={parallax(24)} className="absolute left-[30%] top-[8%] glass-card rounded-2xl px-4 py-3 shadow-soft-xl border border-white/60 dark:border-paw-darkborder animate-float-delayed">
           <div className="text-xs font-extrabold text-paw-dark dark:text-white">Luna · Chief Joy Officer</div>
           <div className="text-[11px] text-paw-secondary dark:text-paw-warm-sage">All vaccines up to date ✓</div>
         </div>
@@ -54,7 +58,7 @@ export const About: React.FC = () => (
         <h2 className="text-2xl font-extrabold text-paw-dark dark:text-white">What pet parents deal with</h2>
         <ul className="mt-6 space-y-4">
           {PROBLEMS.map(({ icon, text }) => (
-            <li key={text} className="flex gap-3"><IconTile icon={icon} tone="rose" size="sm" /><span className="text-sm text-paw-secondary dark:text-paw-warm-sage pt-1.5">{text}</span></li>
+            <li key={text} className="group flex gap-3"><IconTile icon={icon} tone="rose" size="sm" className="group-hover:animate-wiggle" /><span className="text-sm text-paw-secondary dark:text-paw-warm-sage pt-1.5">{text}</span></li>
           ))}
         </ul>
       </Reveal>
@@ -62,7 +66,7 @@ export const About: React.FC = () => (
         <h2 className="text-2xl font-extrabold">What PawPrint does instead</h2>
         <ul className="mt-6 space-y-4">
           {PROMISES.map((t) => (
-            <li key={t} className="flex gap-3 text-sm text-emerald-50/90"><CheckCircle2 className="w-5 h-5 flex-shrink-0 text-emerald-300" />{t}</li>
+            <li key={t} className="group flex gap-3 text-sm text-emerald-50/90"><CheckCircle2 className="w-5 h-5 flex-shrink-0 text-emerald-300 group-hover:scale-125 transition-transform" />{t}</li>
           ))}
         </ul>
       </Reveal>
@@ -77,8 +81,8 @@ export const About: React.FC = () => (
         </Reveal>
         <div className="mt-12 grid md:grid-cols-3 gap-6">
           {VALUES.map((v, i) => (
-            <Reveal key={v.title} delay={i * 100} className="card card-interactive p-7">
-              <IconTile icon={v.icon} tone={v.tone} size="lg" />
+            <Reveal key={v.title} delay={i * 100} className="group card card-interactive p-7">
+              <IconTile icon={v.icon} tone={v.tone} size="lg" className="group-hover:scale-110 group-hover:-rotate-6 transition-transform duration-300" />
               <h3 className="mt-5 text-lg font-extrabold text-paw-dark dark:text-white">{v.title}</h3>
               <p className="mt-2 text-sm text-paw-secondary dark:text-paw-warm-sage leading-relaxed">{v.text}</p>
             </Reveal>
@@ -98,4 +102,5 @@ export const About: React.FC = () => (
       </div>
     </section>
   </div>
-);
+  );
+};

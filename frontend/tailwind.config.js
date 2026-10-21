@@ -65,6 +65,7 @@ export default {
         'marquee': 'marquee 38s linear infinite',
         'wiggle': 'wiggle 0.6s ease-in-out',
         'pop': 'pop 0.35s cubic-bezier(0.34, 1.56, 0.64, 1) both',
+        'sheet-up': 'sheetUp 0.4s cubic-bezier(0.16, 1, 0.3, 1) both',
         'slide-in-left': 'slideInLeft 0.32s cubic-bezier(0.16, 1, 0.3, 1) both',
         'slide-in-right': 'slideInRight 0.32s cubic-bezier(0.16, 1, 0.3, 1) both',
         'gradient-x': 'gradientX 8s ease infinite',
@@ -97,6 +98,10 @@ export default {
           '0%, 100%': { transform: 'rotate(0deg)' },
           '25%': { transform: 'rotate(-12deg)' },
           '75%': { transform: 'rotate(12deg)' },
+        },
+        sheetUp: {
+          from: { opacity: 0, transform: 'translateY(40px)' },
+          to: { opacity: 1, transform: 'translateY(0)' },
         },
         pop: {
           from: { opacity: 0, transform: 'scale(0.92)' },

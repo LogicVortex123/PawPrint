@@ -1,14 +1,40 @@
 import React from 'react';
+import { flushSync } from 'react-dom';
 import { Sun, Moon } from 'lucide-react';
 import { useAppStore } from '../../store/useAppStore';
+
+type ViewTransitionDoc = Document & {
+  startViewTransition?: (update: () => void) => { ready: Promise<void> };
+};
 
 export const ThemeToggle: React.FC<{ className?: string }> = ({ className = "" }) => {
   const { theme, toggleTheme } = useAppStore();
   const isDark = theme === 'dark';
 
+  // The new theme spreads out in a circle from the button where supported;
+  // otherwise (or with reduced motion) it simply switches
+  const handleClick = (e: React.MouseEvent<HTMLButtonElement>) => {
+    const doc = document as ViewTransitionDoc;
+    const reduce = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
+    if (!doc.startViewTransition || reduce) { toggleTheme(); return; }
+
+    const { left, top, width, height } = e.currentTarget.getBoundingClientRect();
+    const x = left + width / 2;
+    const y = top + height / 2;
+    const radius = Math.hypot(Math.max(x, window.innerWidth - x), Math.max(y, window.innerHeight - y));
+
+    const transition = doc.startViewTransition(() => { flushSync(() => toggleTheme()); });
+    transition.ready.then(() => {
+      document.documentElement.animate(
+        { clipPath: [`circle(0px at ${x}px ${y}px)`, `circle(${radius}px at ${x}px ${y}px)`] },
+        { duration: 550, easing: 'cubic-bezier(0.16, 1, 0.3, 1)', pseudoElement: '::view-transition-new(root)' },
+      );
+    }).catch(() => {});
+  };
+
   return (
     <button
-      onClick={toggleTheme}
+      onClick={handleClick}
       type="button"
       aria-label={`Switch to ${isDark ? 'light' : 'dark'} mode`}
       title={`Switch to ${isDark ? 'light' : 'dark'} mode`}

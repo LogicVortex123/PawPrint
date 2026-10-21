@@ -31,11 +31,11 @@ export const EmergencyMode: React.FC = () => {
 
   const findClinics = () => {
     setClinicsRequested(true);
-    if (!navigator.geolocation) { fetchClinics(); return; }
+    if (!navigator.geolocation) { fetchClinics(undefined, undefined, 'emergency'); return; }
     setLocating(true);
     navigator.geolocation.getCurrentPosition(
-      (pos) => { setLocating(false); fetchClinics(pos.coords.latitude, pos.coords.longitude); },
-      () => { setLocating(false); fetchClinics(); },
+      (pos) => { setLocating(false); fetchClinics(pos.coords.latitude, pos.coords.longitude, 'emergency'); },
+      () => { setLocating(false); fetchClinics(undefined, undefined, 'emergency'); },
       { timeout: 8000 }
     );
   };
@@ -49,7 +49,7 @@ export const EmergencyMode: React.FC = () => {
   if (!pet) {
     return (
       <div className="py-20 px-4 text-center text-paw-secondary dark:text-paw-warm-sage">
-        {petsLoading ? 'Loading…' : <>No pets yet. <Link to="/features" className="font-bold text-paw-forest underline">Add a pet</Link> to use Emergency Mode.</>}
+        {petsLoading ? 'Loading…' : <>No pets yet. <Link to="/dashboard" className="font-bold text-paw-forest underline">Add a pet</Link> to use Emergency Mode.</>}
       </div>
     );
   }
@@ -57,10 +57,10 @@ export const EmergencyMode: React.FC = () => {
   const contacts = pet.emergencyContact.name || pet.emergencyContact.phone ? [pet.emergencyContact] : [];
 
   return (
-    <div className="min-h-[80vh] bg-rose-50 dark:bg-[#1c0f12] py-6 sm:py-10 px-4">
+    <div className="min-h-[80vh] bg-rose-50 dark:bg-[#1c0f12] py-6 sm:py-10 px-4 rounded-[2rem] border border-rose-100 dark:border-rose-950/60">
       <div className="max-w-3xl mx-auto space-y-5">
         <div className="flex items-center justify-between gap-3">
-          <Link to={`/features?pet=${pet.id}&tab=pet-profiles`} className="inline-flex items-center gap-1.5 text-sm font-bold text-rose-800 dark:text-rose-300 hover:underline">
+          <Link to={`/dashboard?pet=${pet.id}&tab=pet-profiles`} className="inline-flex items-center gap-1.5 text-sm font-bold text-rose-800 dark:text-rose-300 hover:underline">
             <ArrowLeft className="w-4 h-4" /> Back to dashboard
           </Link>
           <span className="px-3 py-1 rounded-full bg-rose-600 text-white text-xs font-extrabold uppercase tracking-wider">🚨 Emergency Mode</span>
@@ -119,7 +119,7 @@ export const EmergencyMode: React.FC = () => {
               )}
             </div>
           )) : (
-            <p className="text-base text-gray-600 dark:text-gray-400">No emergency contact saved. <Link to={`/features?pet=${pet.id}&tab=pet-profiles`} className="font-bold text-rose-700 underline">Add one</Link> so it's here when you need it.</p>
+            <p className="text-base text-gray-600 dark:text-gray-400">No emergency contact saved. <Link to={`/dashboard?pet=${pet.id}&tab=pet-profiles`} className="font-bold text-rose-700 underline">Add one</Link> so it's here when you need it.</p>
           )}
         </section>
 

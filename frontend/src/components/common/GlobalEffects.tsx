@@ -33,7 +33,7 @@ export const GlobalEffects: React.FC = () => {
   // Browser alerts for urgent reminders (only if the user turned alerts on)
   useEffect(() => {
     if (!isAuthenticated) return;
-    return notifyDueReminders(reminders, () => navigate('/features?tab=reminders'));
+    return notifyDueReminders(reminders, () => navigate('/dashboard?tab=reminders'));
   }, [isAuthenticated, reminders, navigate]);
 
   if (!isAuthenticated) return null;

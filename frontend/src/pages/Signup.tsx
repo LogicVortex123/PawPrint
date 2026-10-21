@@ -10,7 +10,7 @@ export const Signup: React.FC = () => {
   const [params] = useSearchParams();
   // Back to the page that sent them here (only same-site paths), otherwise the dashboard
   const redirect = params.get('redirect') || '';
-  const nextPath = redirect.startsWith('/') && !redirect.startsWith('//') ? redirect : '/features';
+  const nextPath = redirect.startsWith('/') && !redirect.startsWith('//') ? redirect : '/dashboard';
   const { signup, googleLogin, createPet, authLoading, authError, clearAuthError, showToast } = useAppStore();
 
   const [name, setName] = useState('');

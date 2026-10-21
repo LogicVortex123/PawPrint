@@ -70,9 +70,12 @@ export const Toast: React.FC = () => {
       }`}
     >
       <div
-        className={`flex items-start gap-3 px-4 py-3.5 rounded-2xl ${s.container} shadow-2xl border backdrop-blur-md`}
+        key={displayMsg}
+        role="status"
+        aria-live="polite"
+        className={`relative overflow-hidden flex items-start gap-3 px-4 py-3.5 rounded-2xl ${s.container} shadow-2xl border backdrop-blur-md animate-toast-in`}
       >
-        <div className="mt-0.5">{s.icon}</div>
+        <div className="mt-0.5 animate-pop [animation-delay:0.15s]">{s.icon}</div>
         <span className={`text-sm font-medium leading-snug flex-1 pr-1 ${s.text}`}>{displayMsg}</span>
         <button
           onClick={clearToast}
@@ -81,6 +84,8 @@ export const Toast: React.FC = () => {
         >
           <X className="w-4 h-4" />
         </button>
+        {/* Drains over the 4 seconds the toast stays up (see showToast) */}
+        <span className="absolute left-0 bottom-0 h-[3px] w-full origin-left bg-white/35" style={{ animation: 'shrinkX 4s linear both' }} aria-hidden />
       </div>
     </div>
   );

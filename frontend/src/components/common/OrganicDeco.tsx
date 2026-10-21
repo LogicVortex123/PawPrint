@@ -5,12 +5,18 @@ import React from 'react';
  * Visual-only, zero business logic.
  */
 
-export const PawIcon: React.FC<{ className?: string; fill?: string }> = ({
+export const PawIcon: React.FC<{ className?: string; fill?: string; style?: React.CSSProperties }> = ({
   className = "w-6 h-6",
   fill = "currentColor",
+  style,
 }) => (
-  <svg viewBox="0 0 24 24" className={className} fill={fill} xmlns="http://www.w3.org/2000/svg">
-    <path d="M12 11.5c-1.66 0-3 1.34-3 3 0 1.25.75 2.32 1.83 2.76-.17.38-.83 1.24-1.83 1.24-1.1 0-2 .9-2 2s.9 2 2 2c2.5 0 4.2-1.85 4.88-3.23.08-.16.12-.34.12-.52 0-.25-.09-.48-.25-.66-.45-.51-.75-1.18-.75-1.92 0-.37.07-.72.2-1.04C12.78 12.02 12.41 11.5 12 11.5zM12 10c1.1 0 2-.9 2-2s-.9-2-2-2-2 .9-2 2 .9 2 2 2zm-4.5 1c1.1 0 2-.9 2-2s-.9-2-2-2-2 .9-2 2 .9 2 2 2zm9 0c1.1 0 2-.9 2-2s-.9-2-2-2-2 .9-2 2 .9 2 2 2zM5.5 14c.83 0 1.5-.67 1.5-1.5S6.33 11 5.5 11 4 11.67 4 12.5 4.67 14 5.5 14zm13 0c.83 0 1.5-.67 1.5-1.5S19.33 11 18.5 11 17 11.67 17 12.5s.67 1.5 1.5 1.5z" />
+  <svg viewBox="0 0 24 24" className={className} style={style} fill={fill} xmlns="http://www.w3.org/2000/svg" aria-hidden>
+    {/* Four toe beans and the main pad */}
+    <ellipse cx="5.6" cy="10.4" rx="2.1" ry="2.6" transform="rotate(-24 5.6 10.4)" />
+    <ellipse cx="9.6" cy="5.9" rx="2.2" ry="2.8" transform="rotate(-8 9.6 5.9)" />
+    <ellipse cx="14.4" cy="5.9" rx="2.2" ry="2.8" transform="rotate(8 14.4 5.9)" />
+    <ellipse cx="18.4" cy="10.4" rx="2.1" ry="2.6" transform="rotate(24 18.4 10.4)" />
+    <path d="M12 11.4c-2.9 0-6.3 3.7-6.3 6.6 0 2 1.4 3.1 3.2 3.1 1.3 0 2-.6 3.1-.6s1.8.6 3.1.6c1.8 0 3.2-1.1 3.2-3.1 0-2.9-3.4-6.6-6.3-6.6z" />
   </svg>
 );
 

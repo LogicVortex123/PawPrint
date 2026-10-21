@@ -34,7 +34,7 @@ export const Modal: React.FC<ModalProps> = ({ title, onClose, children, maxWidth
         role="dialog"
         aria-modal="true"
         aria-label={title}
-        className={`w-full ${maxWidth} max-h-[92vh] overflow-y-auto bg-white dark:bg-paw-darksurface rounded-t-[28px] sm:rounded-[28px] border border-paw-line dark:border-paw-darkborder shadow-soft-2xl animate-slideUp`}
+        className={`w-full ${maxWidth} max-h-[92vh] overflow-y-auto bg-white dark:bg-paw-darksurface rounded-t-[28px] sm:rounded-[28px] border border-paw-line dark:border-paw-darkborder shadow-soft-2xl animate-sheet-up sm:animate-pop`}
         onClick={(e) => e.stopPropagation()}
       >
         <div className="sticky top-0 z-10 flex items-center justify-between gap-3 px-6 sm:px-8 pt-6 pb-4 bg-white/95 dark:bg-paw-darksurface/95 backdrop-blur border-b border-paw-line/70 dark:border-paw-darkborder">

@@ -2,15 +2,18 @@ import React, { useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import {
   Syringe, Pill, Scale, Calendar, Wallet, FileText, Camera, Loader2, Pencil, Share2, FileDown, Siren,
-  ArrowRight, CheckCircle2, AlertCircle, Clock3, TrendingUp, TrendingDown, Minus, Sparkles, Cpu, Plus, Heart,
+  ArrowRight, CheckCircle2, Clock3, TrendingUp, TrendingDown, Minus, Sparkles, Cpu, Plus, Heart,
 } from 'lucide-react';
 import { useAppStore } from '../../../store/useAppStore';
 import { DEFAULT_PREFERENCES, Reminder } from '../../../types';
 import { formatMoney } from '../../../lib/money';
 import { todayKey } from '../../../lib/dates';
-import { SECTIONS, TONES, type DashboardTab } from '../../../lib/navigation';
+import { SECTIONS, TONES, type DashboardTab, type Tone } from '../../../lib/navigation';
+import { useChatStore } from '../../../lib/chat';
+import { PawPalLogo } from '../../chat/PawPalLogo';
 import { CountUp, IconTile, PetAvatar, ProgressRing } from '../../ui';
 import { DoseChecklist } from '../MedicationsTab';
+import { FloatingPaws } from '../../common/Motion';
 import type { TabProps } from './types';
 
 const REMINDER_TAB: Record<Reminder['type'], DashboardTab> = {
@@ -40,7 +43,8 @@ const Sparkline: React.FC<{ values: number[] }> = ({ values }) => {
   const pts = values.map((v, i) => `${(i / (values.length - 1)) * 100},${28 - ((v - min) / range) * 24}`).join(' ');
   return (
     <svg viewBox="0 0 100 30" className="w-full h-8 mt-2" preserveAspectRatio="none" aria-hidden>
-      <polyline points={pts} fill="none" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="stroke-amber-500" vectorEffect="non-scaling-stroke" />
+      <polyline points={pts} fill="none" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="stroke-amber-500" vectorEffect="non-scaling-stroke"
+        pathLength={1000} strokeDasharray="1000" style={{ animation: 'draw 1.4s 0.3s cubic-bezier(0.16, 1, 0.3, 1) both' }} />
     </svg>
   );
 };
@@ -55,7 +59,8 @@ export const OverviewTab: React.FC<TabProps> = ({ pet, goTo, onEditPet, onShare 
 
   const petVax = vaccinations.filter((v) => v.petId === pet.id);
   const overdueVax = petVax.filter((v) => v.status === 'overdue').length;
-  const upToDateVax = petVax.filter((v) => v.status === 'completed').length;
+  // A booster that's due soon still protects them; only overdue ones don't count
+  const upToDateVax = petVax.filter((v) => v.status !== 'overdue').length;
 
   const activeMeds = medications.filter((m) => m.petId === pet.id && m.schedule.active);
   const medsToday = activeMeds.filter((m) => m.schedule.dueToday > 0 || m.frequency === 'as_needed');
@@ -80,15 +85,28 @@ export const OverviewTab: React.FC<TabProps> = ({ pet, goTo, onEditPet, onShare 
     const rank = { urgent: 0, upcoming: 1, info: 2 } as const;
     return rank[a.urgency] - rank[b.urgency] || (a.daysUntil ?? 99) - (b.daysUntil ?? 99);
   });
-  const recent = timeline.filter((t) => t.petId === pet.id).slice(0, 5);
+  const urgentCount = petReminders.filter((r) => r.urgency === 'urgent').length;
+  const soonCount = petReminders.filter((r) => r.urgency === 'upcoming').length;
+  // Past activity only; future visits already show above it as "coming up"
+  const recent = timeline.filter((t) => t.petId === pet.id && new Date(t.sortDate).getTime() <= now).slice(0, 6);
 
-  // Simple wellness score from things the owner controls
-  const score = Math.round(
-    (petVax.length ? (upToDateVax / petVax.length) * 35 : 15)
-    + (dosesDue ? (dosesGiven / dosesDue) * 25 : 25)
-    + (weights.length ? 20 : 5)
-    + (petReminders.filter((r) => r.urgency === 'urgent').length === 0 ? 20 : 5),
-  );
+  // Simple wellness score from things the owner controls, shown part by part
+  const scoreParts: { label: string; points: number; max: number; tone: Tone; tab: DashboardTab; hint: string }[] = [
+    { label: 'Vaccines', points: petVax.length ? (upToDateVax / petVax.length) * 35 : 15, max: 35, tone: 'sky', tab: 'vaccinations', hint: petVax.length ? `${upToDateVax} of ${petVax.length} protected` : 'None recorded' },
+    { label: 'Doses', points: dosesDue ? (dosesGiven / dosesDue) * 25 : 25, max: 25, tone: 'violet', tab: 'medications', hint: dosesDue ? `${dosesGiven} of ${dosesDue} given today` : 'Nothing due today' },
+    { label: 'Weigh-ins', points: weights.length ? 20 : 5, max: 20, tone: 'amber', tab: 'weight-tracking', hint: weights.length ? `${weights.length} logged` : 'Log a first weigh-in' },
+    { label: 'Alerts', points: urgentCount === 0 ? 20 : 5, max: 20, tone: 'rose', tab: 'reminders', hint: urgentCount ? `${urgentCount} urgent open` : 'No urgent alerts' },
+  ];
+  const score = Math.round(scoreParts.reduce((sum, p) => sum + p.points, 0));
+
+  // Doses given vs due on each of the last 7 days, across active courses
+  const week = Array.from({ length: 7 }, (_, i) => {
+    const days = activeMeds.map((m) => m.schedule.history[m.schedule.history.length - 7 + i]).filter(Boolean);
+    return { date: days[0]?.date ?? `${i}`, due: days.reduce((s, d) => s + d.due, 0), given: days.reduce((s, d) => s + d.given, 0) };
+  });
+  const weekDue = week.reduce((s, d) => s + d.due, 0);
+  const weekPct = weekDue ? Math.round((week.reduce((s, d) => s + d.given, 0) / weekDue) * 100) : 0;
+  const openChat = useChatStore((s) => s.openWith);
 
   const handlePhoto = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -119,10 +137,11 @@ export const OverviewTab: React.FC<TabProps> = ({ pet, goTo, onEditPet, onShare 
         <div className="absolute inset-0 bg-paw-pattern opacity-30" aria-hidden />
         <div className="absolute -right-16 -top-16 w-72 h-72 rounded-full bg-emerald-300/20 blur-3xl animate-blob" aria-hidden />
         <div className="absolute -left-10 -bottom-24 w-72 h-72 rounded-full bg-teal-200/10 blur-3xl animate-blob" style={{ animationDelay: '-6s' }} aria-hidden />
+        <FloatingPaws className="text-white/30" count={5} />
         <div className="relative p-6 sm:p-8 flex flex-col md:flex-row md:items-center gap-6 md:gap-8">
           <div className="relative w-28 h-28 sm:w-36 sm:h-36 flex-shrink-0">
             <div className="absolute -inset-1.5 rounded-[2rem] bg-gradient-to-br from-emerald-200/60 to-amber-200/40 blur-sm" aria-hidden />
-            <PetAvatar pet={pet} className="relative w-full h-full !rounded-[1.75rem] ring-4 ring-white/20" />
+            <PetAvatar pet={pet} className="relative w-full h-full !rounded-[1.75rem] ring-4 ring-white/20 animate-pop" />
             <button type="button" onClick={() => photoRef.current?.click()} disabled={uploading}
               aria-label={pet.hasCustomPhoto ? 'Change photo' : 'Upload a photo'} title={pet.hasCustomPhoto ? 'Change photo' : 'Upload a photo'}
               className="absolute -bottom-2 -right-2 w-10 h-10 rounded-full bg-white text-paw-forest flex items-center justify-center shadow-soft-lg hover:scale-110 transition-transform disabled:opacity-70">
@@ -143,10 +162,10 @@ export const OverviewTab: React.FC<TabProps> = ({ pet, goTo, onEditPet, onShare 
               {pet.allergies.length > 0 && <span className="px-3 py-1 rounded-full bg-rose-400/25 text-xs font-bold">⚠ {pet.allergies.length} allerg{pet.allergies.length === 1 ? 'y' : 'ies'}</span>}
             </div>
             <div className="mt-5 flex flex-wrap gap-2">
-              <button onClick={onEditPet} className="btn btn-sm bg-white text-paw-forest hover:bg-emerald-50 shadow-soft"><Pencil className="w-3.5 h-3.5" /> Edit profile</button>
+              <button onClick={onEditPet} className="btn btn-sm bg-white text-paw-forest hover:bg-emerald-50 hover:-translate-y-0.5 shadow-soft"><Pencil className="w-3.5 h-3.5" /> Edit profile</button>
               <button onClick={onShare} className="btn btn-sm bg-white/15 hover:bg-white/25 text-white backdrop-blur"><Share2 className="w-3.5 h-3.5" /> Share with vet</button>
               <Link to={`/pets/${pet.id}/summary`} className="btn btn-sm bg-white/15 hover:bg-white/25 text-white backdrop-blur"><FileDown className="w-3.5 h-3.5" /> Health summary</Link>
-              <Link to={`/emergency?pet=${pet.id}`} className="btn btn-sm bg-rose-500 hover:bg-rose-600 text-white"><Siren className="w-3.5 h-3.5" /> Emergency</Link>
+              <Link to={`/emergency?pet=${pet.id}`} className="group btn btn-sm btn-shine bg-rose-500 hover:bg-rose-600 text-white"><Siren className="w-3.5 h-3.5 group-hover:animate-wiggle" /> Emergency</Link>
             </div>
           </div>
 
@@ -203,34 +222,40 @@ export const OverviewTab: React.FC<TabProps> = ({ pet, goTo, onEditPet, onShare 
         </button>
       </section>
 
-      <div className="grid grid-cols-1 xl:grid-cols-3 gap-6 items-start">
+      {/* Both rows stretch so neighbouring cards always end level */}
+      <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
         {/* Needs attention */}
-        <section className="card p-6 xl:col-span-2">
-          <div className="flex items-center justify-between mb-4">
-            <div className="flex items-center gap-2.5">
+        <section className="card p-6 xl:col-span-2 flex flex-col">
+          <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
+            <div className="flex flex-wrap items-center gap-2.5">
               <IconTile icon={Sparkles} tone="orange" size="sm" />
-              <h3 className="text-base font-extrabold text-paw-dark dark:text-white">Needs attention</h3>
+              <h3 className="text-base font-extrabold text-paw-dark dark:text-white whitespace-nowrap">Needs attention</h3>
+              {urgentCount > 0 && <span className="badge bg-rose-100 text-rose-700 dark:bg-rose-500/15 dark:text-rose-300">{urgentCount} urgent</span>}
+              {soonCount > 0 && <span className="badge bg-amber-100 text-amber-800 dark:bg-amber-500/15 dark:text-amber-300">{soonCount} soon</span>}
             </div>
             <button onClick={() => goTo('reminders')} className="text-xs font-bold text-paw-forest dark:text-paw-sage hover:underline inline-flex items-center gap-1">All reminders <ArrowRight className="w-3.5 h-3.5" /></button>
           </div>
+
           {attention.length === 0 ? (
-            <div className="flex items-center gap-4 p-5 rounded-2xl bg-emerald-50 dark:bg-emerald-500/10 border border-emerald-200/70 dark:border-emerald-500/20">
-              <CheckCircle2 className="w-8 h-8 text-emerald-600 dark:text-emerald-400 flex-shrink-0" />
-              <div>
+            <div className="relative overflow-hidden flex items-center gap-4 p-5 rounded-2xl bg-gradient-to-br from-emerald-50 to-teal-50 dark:from-emerald-500/10 dark:to-teal-500/5 border border-emerald-200/70 dark:border-emerald-500/20">
+              <FloatingPaws className="text-emerald-300/60 dark:text-emerald-400/20" count={4} />
+              <CheckCircle2 className="relative w-10 h-10 text-emerald-600 dark:text-emerald-400 flex-shrink-0 animate-pop" />
+              <div className="relative">
                 <p className="font-bold text-emerald-900 dark:text-emerald-200">{pet.name} is all caught up!</p>
                 <p className="text-xs text-emerald-800/80 dark:text-emerald-300/80">Nothing overdue or due in the next {user?.preferences?.reminderLeadDays ?? DEFAULT_PREFERENCES.reminderLeadDays} days.</p>
               </div>
             </div>
           ) : (
-            <ul className="space-y-2">
-              {attention.slice(0, 5).map((r) => {
+            <ul className="space-y-1.5">
+              {attention.slice(0, 6).map((r) => {
                 const tab = REMINDER_TAB[r.type];
                 const s = SECTIONS[tab];
                 return (
                   <li key={r.id}>
-                    <button onClick={() => goTo(tab)} className="w-full flex items-center gap-3 p-3 rounded-2xl hover:bg-paw-mist dark:hover:bg-paw-darksurface text-left transition-colors group">
+                    <button onClick={() => goTo(tab)} className={`w-full flex items-center gap-3 p-3 rounded-2xl border border-transparent hover:border-paw-line dark:hover:border-paw-darkborder hover:bg-paw-mist dark:hover:bg-paw-darksurface hover:translate-x-0.5 text-left transition-all duration-200 group ${r.urgency === 'urgent' ? 'bg-rose-50/60 dark:bg-rose-500/[0.06]' : ''}`}>
                       <span className="relative">
                         <IconTile icon={s.icon} tone={s.tone} size="sm" />
+                        {r.urgency === 'urgent' && <span className={`absolute -top-0.5 -right-0.5 w-2.5 h-2.5 rounded-full animate-ping opacity-60 ${URGENCY[r.urgency].dot}`} aria-hidden />}
                         <span className={`absolute -top-0.5 -right-0.5 w-2.5 h-2.5 rounded-full ring-2 ring-white dark:ring-paw-darkcard ${URGENCY[r.urgency].dot}`} />
                       </span>
                       <span className="flex-1 min-w-0">
@@ -243,39 +268,94 @@ export const OverviewTab: React.FC<TabProps> = ({ pet, goTo, onEditPet, onShare 
                   </li>
                 );
               })}
+              {attention.length > 6 && (
+                <li>
+                  <button onClick={() => goTo('reminders')} className="w-full text-center text-xs font-bold text-paw-forest dark:text-paw-sage py-2 rounded-xl hover:bg-paw-mist dark:hover:bg-paw-darksurface">
+                    +{attention.length - 6} more in Smart Reminders
+                  </button>
+                </li>
+              )}
             </ul>
           )}
-        </section>
 
-        {/* Quick actions */}
-        <section className="card p-6">
-          <h3 className="text-base font-extrabold text-paw-dark dark:text-white mb-4">Quick add</h3>
-          <div className="grid grid-cols-2 gap-2.5">
-            {([
-              ['weight-tracking', 'Log weight'],
-              ['vaccinations', 'Add vaccine'],
-              ['vet-appointments', 'Book visit'],
-              ['medications', 'Add medication'],
-              ['expenses', 'Add expense'],
-              ['medical-documents', 'Upload file'],
-            ] as [DashboardTab, string][]).map(([tab, label]) => {
-              const s = SECTIONS[tab];
-              const Icon = s.icon;
-              return (
-                <button key={tab} onClick={() => goTo(tab)}
-                  className={`group flex flex-col items-start gap-2 p-3.5 rounded-2xl ${TONES[s.tone].soft} hover:shadow-soft hover:-translate-y-0.5 transition-all text-left`}>
-                  <span className={`w-8 h-8 rounded-xl bg-white dark:bg-paw-darkcard flex items-center justify-center shadow-2xs ${TONES[s.tone].text} group-hover:scale-110 transition-transform`}><Icon className="w-4 h-4" /></span>
-                  <span className="text-xs font-bold text-paw-dark dark:text-white inline-flex items-center gap-1"><Plus className="w-3 h-3" />{label}</span>
-                </button>
-              );
-            })}
+          {/* What the care score is made of — sits at the foot of the card */}
+          <div className="mt-auto pt-6">
+            <div className="rounded-2xl bg-paw-mist/70 dark:bg-paw-darksurface/60 border border-paw-line/70 dark:border-paw-darkborder p-4">
+              <div className="flex items-center justify-between mb-3">
+                <span className="text-[11px] font-extrabold uppercase tracking-wider text-paw-secondary dark:text-paw-warm-sage">How the care score adds up</span>
+                <span className="text-sm font-extrabold text-paw-dark dark:text-white"><CountUp value={score} /><span className="text-paw-secondary dark:text-paw-warm-sage font-semibold">/100</span></span>
+              </div>
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-x-4 gap-y-3">
+                {scoreParts.map((p, i) => (
+                  <button key={p.label} onClick={() => goTo(p.tab)} className="group text-left">
+                    <div className="flex items-center justify-between text-xs font-semibold text-paw-dark dark:text-white">
+                      <span className="group-hover:text-paw-forest dark:group-hover:text-paw-sage transition-colors">{p.label}</span>
+                      <span className="text-paw-secondary dark:text-paw-warm-sage tabular-nums">{Math.round(p.points)}/{p.max}</span>
+                    </div>
+                    <div className="mt-1.5 h-2 rounded-full bg-white dark:bg-paw-darkcard overflow-hidden">
+                      <div className={`h-full rounded-full ${TONES[p.tone].bar} animate-grow-x`} style={{ width: `${(p.points / p.max) * 100}%`, animationDelay: `${0.2 + i * 0.1}s` }} />
+                    </div>
+                    <div className="mt-1 text-[11px] text-paw-secondary dark:text-paw-warm-sage truncate">{p.hint}</div>
+                  </button>
+                ))}
+              </div>
+            </div>
           </div>
         </section>
+
+        <div className="flex flex-col gap-6">
+          {/* Quick actions */}
+          <section className="card p-6">
+            <h3 className="text-base font-extrabold text-paw-dark dark:text-white mb-4">Quick add</h3>
+            <div className="grid grid-cols-2 gap-2.5">
+              {([
+                ['weight-tracking', 'Log weight'],
+                ['vaccinations', 'Add vaccine'],
+                ['vet-appointments', 'Book visit'],
+                ['medications', 'Add medication'],
+                ['expenses', 'Add expense'],
+                ['medical-documents', 'Upload file'],
+              ] as [DashboardTab, string][]).map(([tab, label]) => {
+                const s = SECTIONS[tab];
+                const Icon = s.icon;
+                return (
+                  <button key={tab} onClick={() => goTo(tab)}
+                    className={`group flex flex-col items-start gap-2 p-3.5 rounded-2xl ${TONES[s.tone].soft} hover:shadow-soft hover:-translate-y-1 active:scale-[0.97] transition-all duration-300 text-left`}>
+                    <span className={`w-8 h-8 rounded-xl bg-white dark:bg-paw-darkcard flex items-center justify-center shadow-2xs ${TONES[s.tone].text} group-hover:scale-110 group-hover:-rotate-6 transition-transform duration-300`}><Icon className="w-4 h-4" /></span>
+                    <span className="text-xs font-bold text-paw-dark dark:text-white inline-flex items-center gap-1"><Plus className="w-3 h-3 group-hover:rotate-90 transition-transform duration-300" />{label}</span>
+                  </button>
+                );
+              })}
+            </div>
+          </section>
+
+          {/* Ask PawPal — grows to fill whatever height the row has left */}
+          <section className="group relative overflow-hidden flex-1 flex flex-col justify-between gap-4 rounded-3xl p-6 bg-gradient-to-br from-paw-forest via-[#1B5E49] to-paw-deep text-white shadow-soft-lg min-h-[13rem]">
+            <div className="absolute inset-0 bg-paw-pattern opacity-20" aria-hidden />
+            <div className="absolute -right-12 -bottom-12 w-44 h-44 rounded-full bg-emerald-300/20 blur-2xl animate-blob" aria-hidden />
+            <div className="relative flex items-start gap-3">
+              <PawPalLogo className="w-12 h-12 drop-shadow-lg" animated outlined />
+              <div>
+                <h3 className="font-extrabold leading-tight">Ask PawPal</h3>
+                <p className="mt-0.5 text-xs text-emerald-100/85">Questions about {pet.name}? PawPal knows {pet.gender === 'Female' ? 'her' : pet.gender === 'Male' ? 'his' : 'their'} records.</p>
+              </div>
+            </div>
+            <div className="relative flex flex-col gap-1.5">
+              {[`Is ${pet.name} due any vaccines?`, 'What needs doing today?'].map((q) => (
+                <button key={q} onClick={() => openChat(q)}
+                  className="group flex items-center justify-between gap-2 px-3.5 py-2 rounded-xl bg-white/10 hover:bg-white/20 backdrop-blur text-left text-xs font-semibold transition-colors">
+                  <span className="truncate">{q}</span>
+                  <ArrowRight className="w-3.5 h-3.5 flex-shrink-0 group-hover:translate-x-0.5 transition-transform" />
+                </button>
+              ))}
+            </div>
+          </section>
+        </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Today's doses */}
-        <section className="card p-6">
+        <section className="card p-6 flex flex-col">
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-2.5">
               <IconTile icon={Pill} tone="violet" size="sm" />
@@ -284,7 +364,10 @@ export const OverviewTab: React.FC<TabProps> = ({ pet, goTo, onEditPet, onShare 
             <button onClick={() => goTo('medications')} className="text-xs font-bold text-paw-forest dark:text-paw-sage hover:underline inline-flex items-center gap-1">Medications <ArrowRight className="w-3.5 h-3.5" /></button>
           </div>
           {medsToday.length === 0 ? (
-            <p className="text-sm text-paw-secondary dark:text-paw-warm-sage py-6 text-center">No doses due today. <button onClick={() => goTo('medications')} className="font-bold text-paw-forest dark:text-paw-sage hover:underline">Add a medication</button> to get a daily checklist.</p>
+            <div className="flex-1 flex flex-col items-center justify-center text-center gap-3 py-6">
+              <IconTile icon={Pill} tone="violet" size="lg" className="animate-float-slow" />
+              <p className="text-sm text-paw-secondary dark:text-paw-warm-sage max-w-xs">No doses due today. <button onClick={() => goTo('medications')} className="font-bold text-paw-forest dark:text-paw-sage hover:underline">Add a medication</button> to get a daily checklist with streaks.</p>
+            </div>
           ) : (
             <ul className="space-y-4">
               {medsToday.slice(0, 4).map((m) => (
@@ -295,10 +378,35 @@ export const OverviewTab: React.FC<TabProps> = ({ pet, goTo, onEditPet, onShare 
               ))}
             </ul>
           )}
+
+          {week.some((d) => d.due > 0) && (
+            <div className="mt-auto pt-6">
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-[11px] font-extrabold uppercase tracking-wider text-paw-secondary dark:text-paw-warm-sage">Last 7 days</span>
+                <span className="text-xs font-bold text-violet-700 dark:text-violet-300">{weekPct}% given</span>
+              </div>
+              <div className="flex items-end gap-2 h-20">
+                {week.map((d, i) => {
+                  const pct = d.due ? d.given / d.due : 0;
+                  return (
+                    <div key={d.date} className="flex-1 flex flex-col items-center gap-1.5 h-full" title={d.due ? `${d.given} of ${d.due} doses on ${d.date}` : `Nothing due on ${d.date}`}>
+                      <div className="relative flex-1 w-full max-w-[2.25rem] rounded-xl bg-violet-50 dark:bg-violet-500/10 overflow-hidden">
+                        <div className={`absolute inset-x-0 bottom-0 rounded-xl animate-grow-up ${pct >= 1 ? 'bg-violet-500' : 'bg-violet-300 dark:bg-violet-400/60'}`}
+                          style={{ height: d.due ? `${Math.max(pct * 100, 8)}%` : '0%', animationDelay: `${i * 0.06}s` }} />
+                      </div>
+                      <span className={`text-[10px] font-bold ${i === week.length - 1 ? 'text-violet-700 dark:text-violet-300' : 'text-paw-secondary dark:text-paw-warm-sage'}`}>
+                        {i === week.length - 1 ? 'Today' : new Date(`${d.date}T12:00:00`).toLocaleDateString(undefined, { weekday: 'narrow' })}
+                      </span>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
         </section>
 
         {/* Upcoming visits + recent activity */}
-        <section className="card p-6">
+        <section className="card p-6 flex flex-col">
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-2.5">
               <IconTile icon={Clock3} tone="slate" size="sm" />
@@ -306,7 +414,7 @@ export const OverviewTab: React.FC<TabProps> = ({ pet, goTo, onEditPet, onShare 
             </div>
             <button onClick={() => goTo('health-timeline')} className="text-xs font-bold text-paw-forest dark:text-paw-sage hover:underline inline-flex items-center gap-1">Timeline <ArrowRight className="w-3.5 h-3.5" /></button>
           </div>
-          <ul className="space-y-1">
+          <ul className="space-y-1 flex-1">
             {upcomingVisits.slice(0, 2).map((a) => (
               <li key={a.id} className="flex items-center gap-3 p-2.5 rounded-2xl bg-teal-50/70 dark:bg-teal-500/10">
                 <div className="w-12 text-center flex-shrink-0">
@@ -319,11 +427,11 @@ export const OverviewTab: React.FC<TabProps> = ({ pet, goTo, onEditPet, onShare 
                 </div>
               </li>
             ))}
-            {recent.map((t) => {
+            {recent.slice(0, 4 - Math.min(upcomingVisits.length, 2)).map((t) => {
               const icon = t.category === 'vaccination' ? Syringe : t.category === 'weight' ? Scale : t.category === 'appointment' ? Calendar : FileText;
               const tone = t.category === 'vaccination' ? 'sky' : t.category === 'weight' ? 'amber' : t.category === 'appointment' ? 'teal' : 'indigo';
               return (
-                <li key={t.id} className="flex items-center gap-3 p-2.5">
+                <li key={t.id} className="flex items-center gap-3 p-2.5 rounded-2xl hover:bg-paw-mist dark:hover:bg-paw-darksurface transition-colors">
                   <IconTile icon={icon} tone={tone} size="sm" />
                   <div className="min-w-0 flex-1">
                     <div className="text-sm font-semibold text-paw-dark dark:text-white truncate">{t.title}</div>
@@ -333,22 +441,14 @@ export const OverviewTab: React.FC<TabProps> = ({ pet, goTo, onEditPet, onShare 
               );
             })}
             {upcomingVisits.length === 0 && recent.length === 0 && (
-              <li className="text-sm text-paw-secondary dark:text-paw-warm-sage py-6 text-center flex flex-col items-center gap-2">
-                <Heart className="w-6 h-6 text-rose-400" />
+              <li className="h-full text-sm text-paw-secondary dark:text-paw-warm-sage py-6 text-center flex flex-col items-center justify-center gap-2">
+                <Heart className="w-6 h-6 text-rose-400 animate-heartbeat" />
                 {pet.name}'s story starts here — log a vaccine, weigh-in or visit.
               </li>
             )}
           </ul>
         </section>
       </div>
-
-      {overdueVax > 0 && (
-        <button onClick={() => goTo('vaccinations')} className="w-full flex items-center gap-3 p-4 rounded-2xl bg-rose-50 dark:bg-rose-500/10 border border-rose-200 dark:border-rose-500/20 text-left hover:shadow-soft transition-shadow">
-          <AlertCircle className="w-5 h-5 text-rose-600 dark:text-rose-400 flex-shrink-0" />
-          <span className="flex-1 text-sm font-semibold text-rose-900 dark:text-rose-200">{overdueVax} vaccination{overdueVax === 1 ? ' is' : 's are'} overdue — book a booster soon.</span>
-          <ArrowRight className="w-4 h-4 text-rose-600" />
-        </button>
-      )}
     </div>
   );
 };

@@ -104,7 +104,7 @@ export const GlobalSearch: React.FC<{ open: boolean; onClose: () => void }> = ({
   const openResult = (r: Result) => {
     rememberSearch(query);
     onClose();
-    navigate(`/features?pet=${r.petId}&tab=${r.tab}`);
+    navigate(`/dashboard?pet=${r.petId}&tab=${r.tab}`);
   };
 
   const onKeyDown = (e: React.KeyboardEvent) => {

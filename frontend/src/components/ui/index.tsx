@@ -3,6 +3,26 @@ import type { LucideIcon } from 'lucide-react';
 import { TONES, type Tone } from '../../lib/navigation';
 import type { Pet } from '../../types';
 
+// ── useInView: true once the element has scrolled into view ──────────────────
+
+export function useInView<T extends Element>(options: IntersectionObserverInit = { threshold: 0.12, rootMargin: '0px 0px -40px 0px' }) {
+  const ref = useRef<T | null>(null);
+  const [inView, setInView] = useState(false);
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    // No IntersectionObserver (old browsers, tests) — just show it
+    if (typeof IntersectionObserver === 'undefined') { setInView(true); return; }
+    const io = new IntersectionObserver(([entry]) => {
+      if (entry.isIntersecting) { setInView(true); io.disconnect(); }
+    }, options);
+    io.observe(el);
+    return () => io.disconnect();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+  return [ref, inView] as const;
+}
+
 // ── Reveal: fades content in the first time it scrolls into view ─────────────
 
 type RevealProps = {
@@ -14,8 +34,7 @@ type RevealProps = {
 };
 
 export const Reveal: React.FC<RevealProps> = ({ children, className = '', delay = 0, from = 'up', as: Tag = 'div' }) => {
-  const ref = useRef<HTMLElement | null>(null);
-  const [visible, setVisible] = useState(false);
+  const [ref, visible] = useInView<HTMLElement>();
   // Once the entrance has played, drop the reveal classes so hover effects work normally
   const [done, setDone] = useState(false);
   useEffect(() => {
@@ -23,18 +42,6 @@ export const Reveal: React.FC<RevealProps> = ({ children, className = '', delay 
     const t = setTimeout(() => setDone(true), 750 + delay);
     return () => clearTimeout(t);
   }, [visible, delay]);
-
-  useEffect(() => {
-    const el = ref.current;
-    if (!el) return;
-    // No IntersectionObserver (old browsers, tests) — just show it
-    if (typeof IntersectionObserver === 'undefined') { setVisible(true); return; }
-    const io = new IntersectionObserver(([entry]) => {
-      if (entry.isIntersecting) { setVisible(true); io.disconnect(); }
-    }, { threshold: 0.12, rootMargin: '0px 0px -40px 0px' });
-    io.observe(el);
-    return () => io.disconnect();
-  }, []);
 
   const fromCls = from === 'left' ? 'reveal-left' : from === 'right' ? 'reveal-right' : from === 'zoom' ? 'reveal-zoom' : '';
   return React.createElement(
@@ -76,6 +83,13 @@ export const CountUp: React.FC<{ value: number; decimals?: number; format?: (n: 
   const n = useCountUp(value);
   const rounded = Number(n.toFixed(decimals));
   return <>{format ? format(rounded) : rounded.toLocaleString(undefined, { minimumFractionDigits: decimals, maximumFractionDigits: decimals })}</>;
+};
+
+// Counts up from zero only once it scrolls into view (landing-page stats)
+export const CountUpInView: React.FC<{ value: number; duration?: number; className?: string }> = ({ value, duration = 1400, className }) => {
+  const [ref, inView] = useInView<HTMLSpanElement>();
+  const n = useCountUp(inView ? value : 0, duration);
+  return <span ref={ref} className={className}>{Math.round(n).toLocaleString()}</span>;
 };
 
 // ── Icon tile in a feature colour ────────────────────────────────────────────

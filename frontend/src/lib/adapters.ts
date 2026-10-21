@@ -208,9 +208,12 @@ export function mapBackendDocument(bd: BackendDocument): MedicalDocument {
 
 // ── Clinic ────────────────────────────────────────────────────────────────────
 
-type BackendClinic = {
+export type BackendClinic = {
   _id: string;
   name: string;
+  latitude?: number;
+  longitude?: number;
+  website?: string;
   address?: string;
   phone?: string;
   rating?: number;
@@ -233,6 +236,9 @@ export function mapBackendClinic(bc: BackendClinic): Clinic {
     hours: bc.hours || '',
     isFavorite: !!bc.isFavorite,
     emergency24_7: bc.emergency24_7 || false,
+    latitude: bc.latitude ?? null,
+    longitude: bc.longitude ?? null,
+    website: bc.website || '',
   };
 }
 

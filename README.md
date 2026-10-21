@@ -33,6 +33,8 @@ The application allows users to manage **pet profiles, vaccination records, weig
 
 When the mobile device reconnects to the internet, locally stored changes are automatically synchronized with the cloud backend — the same backend the web dashboard talks to directly.
 
+> **This repository** contains the shared **backend** (`backend/`) and the **web app** (`frontend/`).
+
 ---
 
 # ✨ Features
@@ -75,6 +77,8 @@ When the mobile device reconnects to the internet, locally stored changes are au
 
 ### 📍 Nearby Clinic Discovery
 
+* Real vet clinics near you from OpenStreetMap, imported in the background the first time an area is searched and refreshed weekly
+* Pagination on scroll — the first 6 clinics show straight away, and the next 6 load each time you scroll to the end (with 24/7 and saved filters)
 * Find nearby veterinary clinics using device location (mobile) or browser location (web)
 * Sort clinics based on distance
 * Save favorite clinics for faster booking next time
@@ -108,9 +112,14 @@ The mobile app remains functional even without an internet connection.
 ### 🌐 Web Dashboard
 
 * Log in from any browser with the same account used on mobile
-* Full CRUD access to pets, vaccinations, weight, appointments, and documents
+* A sidebar layout with 11 sections per pet: Overview, Profile & ID, Vaccinations, Medications, Weight, Appointments, Expenses, Nearby Clinics, Medical Vault, Timeline and Smart Reminders
+* **Overview** — today at a glance: a **care score** (vaccines, doses, weigh-ins and open alerts), today's doses, next visit, this month's spending and what needs attention
+* **Analytics** — vaccination status, weight trend, upcoming visits and spending across all your pets
+* Add or edit a pet in a quick pop-up form; unsaved edits are restored if you close it by accident
+* Full create, edit and delete for every record type
 * Changes made on the web appear on mobile the next time it syncs, and vice versa
 * Always-online by design — no offline queue on web, since a browser session assumes connectivity
+* A redesigned, responsive look with real pet photography, light/dark themes and plain, friendly wording throughout
 
 ### 💊 Medication Tracker
 
@@ -123,8 +132,10 @@ The mobile app remains functional even without an internet connection.
 
 * Log vet bills, food, grooming, insurance, supplies, training and boarding per pet
 * Monthly spending chart, category breakdown, this month vs last month and monthly average
+* View one pet's spending or all pets together, and filter by category
 * One tap to log the cost of a completed vet visit
-* Export a year of expenses as a spreadsheet (CSV), in your chosen currency
+* Amounts must be above zero, so totals and averages stay accurate
+* Export a year of expenses as a spreadsheet (CSV, e.g. `pawprint-expenses-2026.csv`), in your chosen currency
 
 ### 🔔 Smart Reminders & Email
 
@@ -157,6 +168,13 @@ The mobile app remains functional even without an internet connection.
 
 * One-tap access to a pet's allergies, medications, vaccination summary and emergency contacts
 * Designed for fast, minimal-tap access during urgent situations
+
+### 💬 PawPal Assistant
+
+* A chat assistant on every page — tap **Ask PawPal**
+* Signed in, it answers from your pet's own records: what's due, today's doses, weight trends, upcoming visits and spending, with one-tap links to the right section
+* Explains how to use PawPrint and gives everyday care tips; for anything that sounds urgent it tells you to contact a vet first
+* Uses Claude when `ANTHROPIC_API_KEY` is set on the backend, and built-in replies from the same records otherwise
 
 ### 🔍 Search & Export
 
@@ -192,11 +210,15 @@ The mobile app remains functional even without an internet connection.
 | **TypeScript**        | Type-safe application development                                |
 | **React Router**      | Web navigation and routing (the web equivalent of React Navigation)|
 | **Zustand**           | Shared state-management patterns, reused from the mobile app      |
-| **Tailwind CSS**      | Utility-first styling for the dashboard                          |
+| **Tailwind CSS**      | Utility-first styling, with a custom PawPrint colour palette and dark mode |
+| **Lucide React**      | Icon set used across the app                                     |
 | **qrcode**            | QR codes for share-with-vet links                                |
+| **Google Identity Services** | "Continue with Google" in the browser (loaded from Google, no extra package) |
+| **Fetch API**         | Calls to the backend through one small client (`lib/api.ts`)     |
 | **Vitest + React Testing Library** | Unit and component tests                            |
 
 > The web app is intentionally **always-online** — no offline queue, no local SQLite. It calls the same REST API directly on every screen.
+> Charts (weight trend, monthly spending) are hand-drawn SVG, so no chart library is needed.
 
 ## 💾 Local Storage (Mobile)
 
@@ -265,8 +287,20 @@ npm run dev                 # http://localhost:5000  (health check: /health)
 cd frontend
 cp .env.example .env        # VITE_API_URL=http://localhost:5000
 npm install
-npm run dev                 # http://localhost:5173
+npm run dev                 # http://localhost:5173 (always this port — see below)
 ```
+
+Run **one** backend terminal and **one** frontend terminal. The web app always runs on
+port **5173** (`strictPort` in `vite.config.ts`): if 5173 is busy it stops with an error instead
+of quietly moving to 5174, because Google Sign-In only works on registered addresses. In
+development the API accepts requests from any `localhost` port; in production only the
+`WEB_ORIGIN` address is allowed.
+
+**Google Sign-In (optional).** Put the same OAuth client ID in `backend/.env`
+(`GOOGLE_CLIENT_ID`) and `frontend/.env` (`VITE_GOOGLE_CLIENT_ID`). In
+[Google Cloud Console → Credentials](https://console.cloud.google.com/apis/credentials), open
+that OAuth client and add both of these under **Authorized JavaScript origins**:
+`http://localhost` and `http://localhost:5173` (plus your deployed web address).
 
 **Email (optional).** Reminders, appointment confirmations and password resets need an SMTP
 login in `backend/.env`. For Gmail: turn on 2-Step Verification, create an
@@ -274,7 +308,20 @@ login in `backend/.env`. For Gmail: turn on 2-Step Verification, create an
 Without it, in development every email gets a **preview link** (printed in the backend console,
 and shown after *Settings → Send test email now*) instead of being delivered.
 
+**PawPal with Claude (optional).** Set `ANTHROPIC_API_KEY` in `backend/.env` (and optionally
+`ASSISTANT_MODEL`, default `claude-opus-5-5`). The key stays on the server; without it PawPal
+answers from the pet's records with built-in replies.
+
 The full list of endpoints is in [`backend/API.md`](backend/API.md).
+
+### 🩺 Troubleshooting
+
+| Problem | Fix |
+| --- | --- |
+| `Port 5000 is already in use` | Another backend is still running — close the other terminal, or in PowerShell: `Stop-Process -Id (Get-NetTCPConnection -LocalPort 5000 -State Listen).OwningProcess` |
+| `Port 5173 is already in use` | Another copy of the web app is running — close it and use that one tab |
+| Google says **Error 400: origin_mismatch** | Open the app at exactly `http://localhost:5173`, and make sure that address is in the OAuth client's Authorized JavaScript origins |
+| Pages load but nothing saves | Check the backend terminal shows `MongoDB connected` and `http://localhost:5000/health` returns `ok` |
 
 ## 📁 Project Structure
 
@@ -301,11 +348,22 @@ PawPrint/
 ├── frontend/                    React + Vite web app
 │   ├── src/
 │   │   ├── pages/               One file per route (lazy-loaded)
-│   │   ├── components/          common/ (navbar, modals…), dashboard/ (tabs), summary/
+│   │   ├── components/
+│   │   │   ├── layout/          AppShell — dashboard sidebar, top bar and search
+│   │   │   ├── ui/              Shared building blocks (section headers, empty states, toggles)
+│   │   │   ├── dashboard/       Add/Edit pet modals, Medications, Expenses, share dialog
+│   │   │   │   └── tabs/        Overview, Profile, Vaccinations, Weight, Appointments,
+│   │   │   │                    Clinics, Documents, Timeline, Reminders
+│   │   │   ├── home/, hero/     Landing page sections
+│   │   │   ├── common/          Navbar, footer, modal, search, reminder bell, auth visuals
+│   │   │   └── summary/         Printable health summary
 │   │   ├── store/               Zustand store — all API calls go through it
-│   │   ├── lib/                 api client, adapters, dates, money, notifications
+│   │   ├── lib/                 api client, adapters, dates, money, navigation,
+│   │   │                        Google sign-in, notifications, drafts
+│   │   ├── data/                Roadmap content
 │   │   ├── types/               Shared TypeScript types
 │   │   └── test/                Test setup and component tests
+│   ├── public/images/           Pet photography used across the app
 │   ├── vercel.json              Vercel hosting (SPA routing, caching, headers)
 │   └── public/_redirects        Netlify SPA routing
 └── render.yaml                  Render blueprint for the backend
@@ -340,7 +398,7 @@ PawPrint/
                          Internet Available               │
                                 │                       │
                                 ▼                       ▼
-                         Axios / REST API (shared by both clients)
+                REST API (Axios on mobile, fetch on web — shared by both)
                                        │
                                        ▼
                          ┌─────────────────────────┐
@@ -481,8 +539,8 @@ The web dashboard skips Splash/Onboarding — it goes straight from Login to the
         ▼                             ▼
  Email & Password               Google Sign-In
         │                     (expo-auth-session on
-        ▼                      mobile, @react-oauth/
-Backend Validation              google on web)
+        ▼                      mobile, Google Identity
+Backend Validation              Services on web)
         │                             │
         ▼                             ▼
 bcrypt Password                Google ID Token
@@ -530,8 +588,8 @@ All synchronized user data is protected through authenticated API requests, rega
 
 * Home, About, Roadmap
 * Login / Register (email or Google), Forgot Password, Reset Password
-* Dashboard (`/features`) with tabs: Pet Profiles, Vaccinations, Medications, Weight Tracking, Appointments, Expenses, Nearby Clinics, Medical Vault, Timeline, Smart Reminders
-* Analytics — health score, weight trend, vaccination status, spending, recent activity
+* Dashboard (`/dashboard`; signed-in visitors to the home and login pages land here) with sections: Overview, Profile & ID, Vaccinations, Medications, Weight, Appointments, Expenses, Nearby Clinics, Medical Vault, Timeline, Smart Reminders
+* Analytics — care score, weight trend, vaccination status, upcoming visits, spending, recent activity
 * Health Summary (printable PDF) and Share with Vet
 * Shared Record (`/share/:token`) — public, read-only view for vets and sitters
 * Emergency Mode
@@ -597,14 +655,17 @@ cd frontend && npm test         # Vitest + React Testing Library
 cd frontend && npm run build    # type-check + production build
 ```
 
+Current status: **64 backend tests** and **15 web tests**, all passing.
+
 * **Backend unit tests** — reminder rules, medication schedules and adherence, expense totals,
   weight trends and targets, vaccination status, clinic distance, email templates, input sanitising.
 * **Backend integration tests** — real HTTP requests through the whole API against a throwaway
   in-memory database: auth and password reset, account isolation between users, blocked
-  mass-assignment and NoSQL injection, expenses, clinics, share links, health checks.
+  mass-assignment and NoSQL injection, expenses (including rejecting zero amounts), clinics,
+  share links, health checks.
 * **Web tests** — date/money/adapter helpers and components (Medications tab, Forgot Password,
   404 page, error boundary).
-* **Mobile** — React Native Testing Library, alongside the mobile app.
+* **Mobile** — React Native Testing Library, alongside the mobile app (not part of this repository).
 
 ---
 

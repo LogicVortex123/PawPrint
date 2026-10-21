@@ -1,16 +1,21 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { Menu, X, LogOut, Search, Settings as SettingsIcon, Github, LayoutDashboard, ChevronDown, ArrowRight } from 'lucide-react';
+import { Menu, X, LogOut, Search, Settings as SettingsIcon, LayoutDashboard, ChevronDown, ArrowRight } from 'lucide-react';
 import { ThemeToggle } from './ThemeToggle';
 import { ReminderBell } from './ReminderBell';
 import { useAppStore } from '../../store/useAppStore';
 
-export const GITHUB_URL = 'https://github.com/LogicVortex123/PawPrint';
-
 const NAV_LINKS = [
   { label: 'Home', to: '/' },
   { label: 'Features', to: '/#features' },
-  { label: 'How it works', to: '/#how-it-works' },
+  { label: 'Guide', to: '/#guide' },
+  { label: 'About', to: '/about' },
+  { label: 'Roadmap', to: '/roadmap' },
+];
+
+// Signed in, the landing page sends you to the dashboard, so link there instead
+const NAV_LINKS_SIGNED_IN = [
+  { label: 'Dashboard', to: '/dashboard' },
   { label: 'About', to: '/about' },
   { label: 'Roadmap', to: '/roadmap' },
 ];
@@ -25,6 +30,15 @@ export const Brand: React.FC<{ className?: string; light?: boolean }> = ({ class
     </span>
   </Link>
 );
+
+// Leave for the home page and sign out in the same tick. Navigating first stops
+// the protected page from bouncing to /login; signing out in the same batch
+// stops the home page from sending a still-signed-in user to the dashboard.
+export function signOutToHome(navigate: (to: string, opts?: { replace?: boolean }) => void, logout: () => void, showToast: (m: string) => void) {
+  navigate('/', { replace: true });
+  logout();
+  showToast('You\'ve been signed out. See you soon! 👋');
+}
 
 // Avatar with a small dropdown for the signed-in user
 export const AccountMenu: React.FC<{ align?: 'left' | 'right'; up?: boolean }> = ({ align = 'right', up = false }) => {
@@ -47,13 +61,7 @@ export const AccountMenu: React.FC<{ align?: 'left' | 'right'; up?: boolean }> =
 
   const handleLogout = () => {
     setOpen(false);
-    // Leave the protected page first; logging out while still on it would
-    // bounce to /login instead of the home page
-    navigate('/');
-    setTimeout(() => {
-      logout();
-      showToast('You\'ve been signed out. See you soon! 👋');
-    }, 0);
+    signOutToHome(navigate, logout, showToast);
   };
 
   return (
@@ -70,7 +78,7 @@ export const AccountMenu: React.FC<{ align?: 'left' | 'right'; up?: boolean }> =
             <div className="text-sm font-bold text-paw-dark dark:text-white truncate">{user.name}</div>
             <div className="text-xs text-paw-secondary dark:text-paw-warm-sage truncate">{user.email}</div>
           </div>
-          <Link role="menuitem" to="/features" onClick={() => setOpen(false)} className="flex items-center gap-2.5 px-3 py-2 rounded-xl text-sm font-semibold text-paw-dark dark:text-white hover:bg-paw-light-sage dark:hover:bg-paw-darksurface">
+          <Link role="menuitem" to="/dashboard" onClick={() => setOpen(false)} className="flex items-center gap-2.5 px-3 py-2 rounded-xl text-sm font-semibold text-paw-dark dark:text-white hover:bg-paw-light-sage dark:hover:bg-paw-darksurface">
             <LayoutDashboard className="w-4 h-4 text-paw-forest dark:text-paw-sage" /> Dashboard
           </Link>
           <Link role="menuitem" to="/settings" onClick={() => setOpen(false)} className="flex items-center gap-2.5 px-3 py-2 rounded-xl text-sm font-semibold text-paw-dark dark:text-white hover:bg-paw-light-sage dark:hover:bg-paw-darksurface">
@@ -91,14 +99,9 @@ export const Navbar: React.FC = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const { isAuthenticated, user, setSearchOpen, logout, showToast } = useAppStore();
+  const links = isAuthenticated ? NAV_LINKS_SIGNED_IN : NAV_LINKS;
 
-  const handleLogout = () => {
-    navigate('/');
-    setTimeout(() => {
-      logout();
-      showToast('You\'ve been signed out. See you soon! 👋');
-    }, 0);
-  };
+  const handleLogout = () => signOutToHome(navigate, logout, showToast);
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 12);
@@ -115,6 +118,21 @@ export const Navbar: React.FC = () => {
     return location.pathname.startsWith(to);
   };
 
+  // The active-link pill slides between links instead of jumping
+  const navRef = useRef<HTMLElement>(null);
+  const [pill, setPill] = useState<{ left: number; width: number } | null>(null);
+  useLayoutEffect(() => {
+    const measure = () => {
+      const el = navRef.current?.querySelector<HTMLElement>('[data-active="true"]');
+      setPill(el ? { left: el.offsetLeft, width: el.offsetWidth } : null);
+    };
+    measure();
+    // Link widths change once the web font arrives
+    document.fonts?.ready.then(measure).catch(() => {});
+    window.addEventListener('resize', measure);
+    return () => window.removeEventListener('resize', measure);
+  }, [location.pathname, location.hash]);
+
   return (
     <header className="print:hidden sticky top-0 z-50 px-3 sm:px-6 pt-3">
       <div className={`max-w-7xl mx-auto rounded-full transition-all duration-300 ${scrolled
@@ -123,13 +141,17 @@ export const Navbar: React.FC = () => {
         <div className="flex items-center justify-between h-16 pl-4 pr-2 sm:pl-5 sm:pr-3">
           <Brand />
 
-          <nav className="hidden md:flex items-center gap-1" aria-label="Main">
-            {NAV_LINKS.map((link) => (
-              <Link key={link.to} to={link.to}
-                className={`px-3.5 py-2 rounded-full text-sm font-semibold transition-colors ${isActive(link.to)
-                  ? 'text-paw-forest dark:text-white bg-paw-light-sage dark:bg-paw-darkcard'
+          <nav ref={navRef} className="relative hidden md:flex items-center gap-1" aria-label="Main">
+            <span aria-hidden
+              className={`absolute inset-y-0 rounded-full bg-paw-light-sage dark:bg-paw-darkcard transition-all duration-500 ease-[cubic-bezier(0.34,1.3,0.64,1)] ${pill ? 'opacity-100' : 'opacity-0'}`}
+              style={pill ? { left: pill.left, width: pill.width } : undefined} />
+            {links.map((link) => (
+              <Link key={link.to} to={link.to} data-active={isActive(link.to)} aria-current={isActive(link.to) ? 'page' : undefined}
+                className={`group relative px-3.5 py-2 rounded-full text-sm font-semibold transition-colors ${isActive(link.to)
+                  ? 'text-paw-forest dark:text-white'
                   : 'text-paw-secondary dark:text-paw-warm-sage/80 hover:text-paw-dark dark:hover:text-white'}`}>
                 {link.label}
+                {!isActive(link.to) && <span className="absolute left-1/2 bottom-1 h-0.5 w-0 -translate-x-1/2 rounded-full bg-paw-sage transition-all duration-300 group-hover:w-4" aria-hidden />}
               </Link>
             ))}
           </nav>
@@ -141,13 +163,10 @@ export const Navbar: React.FC = () => {
               </button>
             )}
             {isAuthenticated && <ReminderBell />}
-            <a href={GITHUB_URL} target="_blank" rel="noopener noreferrer" aria-label="View on GitHub" title="View on GitHub" className="icon-btn">
-              <Github className="w-4 h-4" />
-            </a>
             <ThemeToggle />
             {isAuthenticated && user ? (
               <>
-                <Link to="/features" className="btn-primary btn-sm">
+                <Link to="/dashboard" className="btn-primary btn-sm">
                   <LayoutDashboard className="w-3.5 h-3.5" /> Dashboard
                 </Link>
                 <AccountMenu />
@@ -173,8 +192,8 @@ export const Navbar: React.FC = () => {
       </div>
 
       {mobileMenuOpen && (
-        <div className="md:hidden max-w-7xl mx-auto mt-2 card p-3 space-y-1 animate-scaleIn">
-          {NAV_LINKS.map((link) => (
+        <div className="md:hidden max-w-7xl mx-auto mt-2 card p-3 space-y-1 animate-scaleIn stagger">
+          {links.map((link) => (
             <Link key={link.to} to={link.to}
               className={`block px-4 py-3 rounded-2xl text-base font-semibold ${isActive(link.to)
                 ? 'bg-paw-light-sage dark:bg-paw-darksurface text-paw-forest dark:text-white'
@@ -185,7 +204,7 @@ export const Navbar: React.FC = () => {
           <div className="pt-3 mt-2 border-t border-paw-line dark:border-paw-darkborder grid grid-cols-2 gap-2">
             {isAuthenticated && user ? (
               <>
-                <Link to="/features" className="btn-primary col-span-2"><LayoutDashboard className="w-4 h-4" /> Open dashboard</Link>
+                <Link to="/dashboard" className="btn-primary col-span-2"><LayoutDashboard className="w-4 h-4" /> Open dashboard</Link>
                 <button onClick={() => setSearchOpen(true)} className="btn-secondary"><Search className="w-4 h-4" /> Search</button>
                 <Link to="/settings" className="btn-secondary"><SettingsIcon className="w-4 h-4" /> Settings</Link>
                 <button onClick={handleLogout} className="btn-danger-outline col-span-2"><LogOut className="w-4 h-4" /> Log out</button>
@@ -195,9 +214,7 @@ export const Navbar: React.FC = () => {
                 <Link to="/login" className="btn-secondary">Log in</Link>
                 <Link to="/signup" className="btn-primary">Get started</Link>
               </>
-            )}
-            <a href={GITHUB_URL} target="_blank" rel="noopener noreferrer" className="btn-ghost col-span-2"><Github className="w-4 h-4" /> View on GitHub</a>
-          </div>
+            )}          </div>
         </div>
       )}
     </header>

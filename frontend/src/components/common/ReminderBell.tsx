@@ -41,7 +41,7 @@ export const ReminderBell: React.FC<{ className?: string }> = ({ className = '' 
 
   const openReminders = (petId?: string, tab = 'reminders') => {
     setOpen(false);
-    navigate(`/features?${petId ? `pet=${petId}&` : ''}tab=${tab}`);
+    navigate(`/dashboard?${petId ? `pet=${petId}&` : ''}tab=${tab}`);
   };
 
   return (

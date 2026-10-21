@@ -54,8 +54,27 @@
     @apply bg-paw-mist dark:bg-paw-darksurface rounded-3xl border border-paw-line dark:border-paw-darkborder;
   }
   .card-interactive {
-    @apply transition-all duration-300 hover:-translate-y-0.5 hover:shadow-card-hover hover:border-paw-sage/50 dark:hover:border-paw-sage/40;
+    @apply spotlight transition-all duration-300 hover:-translate-y-0.5 hover:shadow-card-hover hover:border-paw-sage/50 dark:hover:border-paw-sage/40;
   }
+  /* Cursor spotlight: a soft sage glow follows the pointer across a card.
+     --mx / --my are set by useSpotlightTracker. Uses ::after because some
+     cards already draw a status edge with ::before. */
+  .spotlight { position: relative; isolation: isolate; }
+  .spotlight::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    border-radius: inherit;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.35s ease;
+    background: radial-gradient(420px circle at var(--mx, 50%) var(--my, 50%), rgba(111, 165, 140, 0.16), transparent 45%);
+  }
+  .dark .spotlight::after {
+    background: radial-gradient(420px circle at var(--mx, 50%) var(--my, 50%), rgba(169, 205, 185, 0.10), transparent 45%);
+  }
+  .spotlight:hover::after { opacity: 1; }
 
   /* Buttons */
   .btn {
@@ -65,8 +84,23 @@
   .btn-md { @apply px-5 py-2.5; }
   .btn-lg { @apply px-7 py-3.5 text-base; }
   .btn-primary {
-    @apply btn btn-md bg-paw-forest text-white shadow-soft hover:bg-paw-deep hover:shadow-soft-lg;
+    @apply btn btn-md btn-shine bg-paw-forest text-white shadow-soft hover:bg-paw-deep hover:shadow-soft-lg hover:-translate-y-px;
   }
+  /* A soft light sweep across the button on hover */
+  .btn-shine {
+    @apply relative overflow-hidden isolate;
+  }
+  .btn-shine::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    background: linear-gradient(105deg, transparent 35%, rgba(255, 255, 255, 0.28) 50%, transparent 65%);
+    transform: translateX(-110%);
+    transition: transform 0.7s cubic-bezier(0.16, 1, 0.3, 1);
+    pointer-events: none;
+  }
+  .btn-shine:hover::after { transform: translateX(110%); }
   .btn-secondary {
     @apply btn btn-md bg-white dark:bg-paw-darkcard text-paw-dark dark:text-white border border-paw-line dark:border-paw-darkborder hover:border-paw-forest dark:hover:border-paw-sage shadow-2xs;
   }
@@ -115,9 +149,15 @@
   .text-gradient {
     @apply bg-clip-text text-transparent bg-gradient-to-r from-paw-forest via-emerald-500 to-teal-500 dark:from-paw-sage dark:via-emerald-300 dark:to-teal-300;
   }
+  /* Same gradient, slowly drifting through forest → emerald → honey */
+  .text-gradient-flow {
+    @apply bg-clip-text text-transparent bg-gradient-to-r from-paw-forest via-emerald-500 to-paw-forest dark:from-paw-sage dark:via-emerald-300 dark:to-paw-sage;
+    background-size: 200% auto;
+    animation: gradientX 6s ease-in-out infinite;
+  }
 
   .badge {
-    @apply inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase tracking-wide;
+    @apply inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase tracking-wide whitespace-nowrap;
   }
 }
 
@@ -234,6 +274,134 @@
 .reveal.reveal-right { transform: translateX(32px); }
 .reveal.reveal-zoom  { transform: scale(0.94); }
 .reveal.is-visible   { opacity: 1; transform: none; }
+
+/* ── Motion extras ─────────────────────────────────────── */
+
+@keyframes gradientX {
+  0%, 100% { background-position: 0% 50%; }
+  50%      { background-position: 100% 50%; }
+}
+
+@keyframes pageIn {
+  from { opacity: 0; transform: translateY(14px); filter: blur(4px); }
+  to   { opacity: 1; transform: none; filter: none; }
+}
+
+/* Paw prints drifting up behind hero areas */
+@keyframes driftUp {
+  0%   { opacity: 0; transform: translateY(0) rotate(var(--rot, 0deg)) scale(0.8); }
+  15%  { opacity: var(--o, 0.5); }
+  85%  { opacity: var(--o, 0.5); }
+  100% { opacity: 0; transform: translateY(-160px) rotate(calc(var(--rot, 0deg) + 25deg)) scale(1); }
+}
+
+/* Each paw in a trail stamps in, holds, then fades so the walk loops */
+@keyframes pawStep {
+  0%       { opacity: 0; transform: scale(0.4) rotate(var(--rot, 0deg)); }
+  8%, 55%  { opacity: 1; transform: scale(1) rotate(var(--rot, 0deg)); }
+  70%, 100%{ opacity: 0; transform: scale(1) rotate(var(--rot, 0deg)); }
+}
+
+@keyframes growUp {
+  from { transform: scaleY(0); }
+  to   { transform: scaleY(1); }
+}
+
+@keyframes shrinkX {
+  from { transform: scaleX(1); }
+  to   { transform: scaleX(0); }
+}
+
+@keyframes heartbeat {
+  0%, 100% { transform: scale(1); }
+  15%      { transform: scale(1.25); }
+  30%      { transform: scale(1); }
+  45%      { transform: scale(1.18); }
+}
+
+@keyframes pawBounce {
+  0%, 80%, 100% { transform: translateY(0) scale(1); opacity: 0.35; }
+  40%           { transform: translateY(-10px) scale(1.1); opacity: 1; }
+}
+
+@keyframes scrollHint {
+  0%   { transform: translateY(0); opacity: 0; }
+  30%  { opacity: 1; }
+  100% { transform: translateY(10px); opacity: 0; }
+}
+
+@keyframes toastIn {
+  from { opacity: 0; transform: translateX(24px) scale(0.96); }
+  to   { opacity: 1; transform: none; }
+}
+
+.animate-page-in   { animation: pageIn 0.5s cubic-bezier(0.16, 1, 0.3, 1) both; }
+.animate-heartbeat { animation: heartbeat 1.8s ease-in-out infinite; }
+.animate-toast-in  { animation: toastIn 0.45s cubic-bezier(0.34, 1.4, 0.64, 1) both; }
+.animate-grow-up   { animation: growUp 0.7s cubic-bezier(0.16, 1, 0.3, 1) both; transform-origin: bottom; }
+@keyframes growX {
+  from { transform: scaleX(0); }
+  to   { transform: scaleX(1); }
+}
+.animate-grow-x    { animation: growX 0.9s cubic-bezier(0.16, 1, 0.3, 1) both; transform-origin: left; }
+.animate-scroll-hint { animation: scrollHint 1.8s ease-in-out infinite; }
+.animate-paw-bounce  { animation: pawBounce 1.2s ease-in-out infinite; }
+
+/* PawPal chat: the panel grows out of its launcher, messages rise in */
+@keyframes chatPanel {
+  from { opacity: 0; transform: translateY(16px) scale(0.96); transform-origin: bottom right; }
+  to   { opacity: 1; transform: none; transform-origin: bottom right; }
+}
+@keyframes chatIn {
+  from { opacity: 0; transform: translateY(8px) scale(0.98); }
+  to   { opacity: 1; transform: none; }
+}
+.animate-chat-panel { animation: chatPanel 0.38s cubic-bezier(0.34, 1.3, 0.64, 1) both; }
+.animate-chat-in    { animation: chatIn 0.32s cubic-bezier(0.16, 1, 0.3, 1) both; }
+
+/* Notification cards dropping in from above (home page guide) */
+@keyframes dropIn {
+  0%   { opacity: 0; transform: translateY(-22px) scale(0.96); }
+  70%  { opacity: 1; transform: translateY(3px) scale(1.01); }
+  100% { opacity: 1; transform: none; }
+}
+.animate-drop-in { animation: dropIn 0.55s cubic-bezier(0.34, 1.4, 0.64, 1) both; }
+
+/* PawPal mascot: blinks every few seconds, twinkles, and wags its ears on hover */
+@keyframes pawpalBlink {
+  0%, 92%, 100% { transform: scaleY(1); }
+  95%           { transform: scaleY(0.1); }
+}
+@keyframes pawpalTwinkle {
+  0%, 100% { transform: scale(1) rotate(0deg); opacity: 1; }
+  50%      { transform: scale(0.6) rotate(45deg); opacity: 0.6; }
+}
+@keyframes pawpalWagLeft {
+  0%, 100% { transform: rotate(0deg); }
+  50%      { transform: rotate(-14deg); }
+}
+@keyframes pawpalWagRight {
+  0%, 100% { transform: rotate(0deg); }
+  50%      { transform: rotate(14deg); }
+}
+.pawpal-animated .pawpal-eyes { transform-box: fill-box; transform-origin: center; animation: pawpalBlink 4.5s ease-in-out infinite; }
+.pawpal-animated .pawpal-sparkle { transform-box: fill-box; transform-origin: center; animation: pawpalTwinkle 2.8s ease-in-out infinite; }
+.pawpal-ear-left, .pawpal-ear-right { transform-box: fill-box; transition: transform 0.3s ease; }
+.pawpal-ear-left  { transform-origin: 80% 10%; }
+.pawpal-ear-right { transform-origin: 20% 10%; }
+.group:hover .pawpal-animated .pawpal-ear-left  { animation: pawpalWagLeft 0.45s ease-in-out 2; }
+.group:hover .pawpal-animated .pawpal-ear-right { animation: pawpalWagRight 0.45s ease-in-out 2; }
+
+
+/* FAQ answers ease open */
+details[open] > .details-body { animation: fadeIn 0.35s ease-out both; }
+
+/* Circular reveal when switching theme (View Transitions API) */
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation: none;
+  mix-blend-mode: normal;
+}
 
 /* Skeleton loading shimmer */
 .animate-shimmer {

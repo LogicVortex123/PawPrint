@@ -16,7 +16,7 @@ const sub = 'text-sm text-paw-secondary dark:text-paw-warm-sage/80 mb-5';
 const errText = (err: unknown, fallback: string) => `❌ ${err instanceof Error ? err.message : fallback}`;
 
 export const Settings: React.FC = () => {
-  const { user, token, updateProfile, changePassword, deleteAccount, themePreference, setThemePreference, showToast, sendTestReminderEmail, downloadMyData } = useAppStore();
+  const { user, token, updateProfile, changePassword, deleteAccount, logout, themePreference, setThemePreference, showToast, sendTestReminderEmail, downloadMyData } = useAppStore();
   const navigate = useNavigate();
 
   const [name, setName] = useState(user?.name || '');
@@ -122,8 +122,9 @@ export const Settings: React.FC = () => {
     setDeleting(true);
     try {
       await deleteAccount(deleteConfirm.trim());
+      navigate('/', { replace: true });
+      logout();
       showToast('Your account and all data have been deleted.');
-      navigate('/');
     } catch (err) {
       showToast(errText(err, 'Could not delete your account.'));
       setDeleting(false);

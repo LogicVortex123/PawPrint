@@ -136,7 +136,7 @@ export const Features: React.FC = () => {
       )}
 
       {/* key remounts the tab so per-pet state (filters, open forms) resets on switch */}
-      <div key={`${activeTab}-${pet.id}`}>
+      <div key={`${activeTab}-${pet.id}`} className="animate-page-in">
         <Tab pet={pet} goTo={goTo} onEditPet={() => setEditingPet(true)} onAddPet={() => setAddingPet(true)} onShare={() => setSharing(true)} />
       </div>
 
