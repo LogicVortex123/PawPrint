@@ -11,5 +11,6 @@ router.use('/reminders', require('./reminder.routes'));
 router.use('/medications', require('./medication.routes'));
 router.use('/shares', require('./share.routes'));
 router.use('/expenses', require('./expense.routes'));
+router.use('/assistant', require('./assistant.routes'));
 
 module.exports = router;

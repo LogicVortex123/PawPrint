@@ -194,7 +194,7 @@ function buildAppointmentEmail({ userName, petName, appointment, kind }) {
         ${row('Notes', appointment.notes)}
       </table>
       <p style="margin: 18px 0 0; font-size: 13px; color: #6b7280;">We'll also include it in your daily reminder email as the day gets closer.</p>
-      ${button(`${appUrl}/features?pet=${appointment.pet}&tab=vet-appointments`, 'View in PawPrint →')}`,
+      ${button(`${appUrl}/dashboard?pet=${appointment.pet}&tab=vet-appointments`, 'View in PawPrint →')}`,
     footerHtml: REMINDER_FOOTER,
   });
 
@@ -208,7 +208,7 @@ function buildAppointmentEmail({ userName, petName, appointment, kind }) {
     clinic ? `Where: ${clinic}` : null,
     appointment.notes ? `Notes: ${appointment.notes}` : null,
     '',
-    `View in PawPrint: ${appUrl}/features?tab=vet-appointments`,
+    `View in PawPrint: ${appUrl}/dashboard?tab=vet-appointments`,
   ].filter((line) => line !== null).join('\n');
 
   return { subject, html, text };

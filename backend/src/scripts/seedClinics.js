@@ -18,7 +18,8 @@ async function run() {
   await connectDB();
 
   for (const clinic of CLINICS) {
-    await Clinic.updateOne({ name: clinic.name }, { $set: clinic }, { upsert: true });
+    // Marked as demo data: the real clinics imported from OpenStreetMap replace them in results
+    await Clinic.updateOne({ name: clinic.name }, { $set: { ...clinic, demo: true } }, { upsert: true });
   }
 
   const count = await Clinic.countDocuments();

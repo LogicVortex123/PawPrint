@@ -108,6 +108,40 @@ describe('clinics', () => {
     expect(ranked[0].distanceKm).toBe(0);
     expect((await owner.get('/clinics/nearby?lat=200&lng=0')).status).toBe(400);
   });
+
+  test('pages through nearby clinics for infinite scroll', async () => {
+    const Clinic = require('../../src/models/Clinic.model');
+    // 30 real clinics spread north of the owner, 1 sample clinic right next to them
+    await Clinic.create([
+      ...Array.from({ length: 30 }, (_, i) => ({ name: `Vet ${String(i + 1).padStart(2, '0')}`, latitude: 12.97 + (i + 1) * 0.01, longitude: 77.59, osmId: `node/${i + 1}`, emergency24_7: i % 10 === 0 })),
+      { name: 'Sample Clinic', latitude: 12.97, longitude: 77.5901, demo: true },
+    ]);
+
+    const first = (await owner.get('/clinics/nearby?lat=12.97&lng=77.59&page=1&limit=12')).body;
+    expect(first).toMatchObject({ page: 1, limit: 12, hasMore: true, syncing: false });
+    expect(first.clinics).toHaveLength(12);
+    expect(first.clinics.map((c) => c.name)).not.toContain('Sample Clinic'); // real clinics replace samples
+    expect(first.clinics[0].name).toBe('Zeta Vets');
+
+    const pages = [first];
+    while (pages[pages.length - 1].hasMore) {
+      pages.push((await owner.get(`/clinics/nearby?lat=12.97&lng=77.59&page=${pages.length + 1}&limit=12`)).body);
+    }
+    const all = pages.flatMap((p) => p.clinics);
+    expect(new Set(all.map((c) => c._id)).size).toBe(all.length); // no repeats across pages
+    expect(all.length).toBe(first.total);
+    expect(all.map((c) => c.distanceKm)).toEqual([...all.map((c) => c.distanceKm)].sort((a, b) => a - b));
+    // Alpha Animal Care (~70 km away) is outside the nearby radius
+    expect(all.map((c) => c.name)).not.toContain('Alpha Animal Care');
+
+    const emergency = (await owner.get('/clinics/nearby?lat=12.97&lng=77.59&page=1&filter=emergency')).body;
+    expect(emergency.clinics.every((c) => c.emergency24_7)).toBe(true);
+    expect(emergency.total).toBe(first.counts.emergency);
+
+    expect((await owner.get('/clinics/nearby?page=0')).status).toBe(400);
+    expect((await owner.get('/clinics/nearby?page=1&limit=500')).status).toBe(400);
+    expect((await owner.get('/clinics/nearby?page=1&filter=cheap')).status).toBe(400);
+  });
 });
 
 describe('vaccine catalogue and weight targets', () => {

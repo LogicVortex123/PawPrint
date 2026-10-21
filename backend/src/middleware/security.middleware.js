@@ -73,6 +73,13 @@ const publicLimiter = limiter({
   message: 'Too many requests. Please slow down.',
 });
 
+// Chat assistant: each message may call a paid AI model
+const chatLimiter = limiter({
+  windowMs: 10 * 60 * 1000,
+  limit: 40,
+  message: 'You\'re sending messages very quickly. Please wait a few minutes and try again.',
+});
+
 // Everything else: a generous ceiling so one runaway client can't hog the API
 const apiLimiter = limiter({
   windowMs: 60 * 1000,
@@ -80,4 +87,4 @@ const apiLimiter = limiter({
   message: 'Too many requests. Please slow down.',
 });
 
-module.exports = { sanitizeInput, stripOperators, securityHeaders, authLimiter, emailLimiter, publicLimiter, apiLimiter };
+module.exports = { sanitizeInput, stripOperators, securityHeaders, authLimiter, emailLimiter, publicLimiter, chatLimiter, apiLimiter };

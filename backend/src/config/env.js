@@ -42,6 +42,15 @@ module.exports = {
   // Behind a host's load balancer (Render, Railway...) set TRUST_PROXY=1 so rate
   // limits see the real client IP instead of the proxy's
   trustProxy: process.env.TRUST_PROXY ? Number(process.env.TRUST_PROXY) || process.env.TRUST_PROXY : false,
+  // Import real vet clinics from OpenStreetMap for areas people search in
+  clinicImport: process.env.CLINIC_IMPORT !== 'false' && nodeEnv !== 'test',
+  // PawPal chat assistant. With an Anthropic API key it answers with Claude;
+  // without one it still works, answering from the pet's records with
+  // built-in replies.
+  assistant: {
+    anthropicApiKey: process.env.ANTHROPIC_API_KEY || '',
+    model: process.env.ASSISTANT_MODEL || 'claude-opus-5-5',
+  },
   // Email / SMTP (Nodemailer) — reminder digests, appointment emails, password resets
   email: {
     host: process.env.EMAIL_HOST || 'smtp.gmail.com',

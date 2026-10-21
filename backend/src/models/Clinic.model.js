@@ -14,8 +14,16 @@ const clinicSchema = new mongoose.Schema(
     reviewsCount: { type: Number, default: 0 },
     hours: { type: String, trim: true },
     emergency24_7: { type: Boolean, default: false },
+    website: { type: String, trim: true },
+    // Real clinics imported from OpenStreetMap carry their OSM id ("node/123")
+    osmId: { type: String, unique: true, sparse: true },
+    // Sample clinics from the seed script — only shown where no real clinics are known
+    demo: { type: Boolean, default: false },
   },
   { timestamps: true }
 );
+
+// Nearby queries filter on a lat/lng box first
+clinicSchema.index({ latitude: 1, longitude: 1 });
 
 module.exports = mongoose.model('Clinic', clinicSchema);

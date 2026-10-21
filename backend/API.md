@@ -117,7 +117,7 @@ Uploaded files are served from `/uploads/<random-uuid>.<ext>`.
 
 | Method | Path | Description |
 |---|---|---|
-| GET 🔒 | `/clinics/nearby?lat=&lng=` | Ranked by distance (`distanceKm`) when coordinates are given; otherwise saved clinics first, then A–Z. Each has `isFavorite` |
+| GET 🔒 | `/clinics/nearby?lat=&lng=&page=&limit=&filter=` | Ranked by distance (`distanceKm`, within ~60 km — or the closest 15 when nothing is that near) when coordinates are given; otherwise saved clinics first, then A–Z. Each has `isFavorite`. With `page` (1-based, `limit` 1–100, default 12; `filter` = `all`, `favorites` or `emergency`) the reply is one page: `{ clinics, page, limit, total, hasMore, counts: { all, favorites, emergency }, syncing }`. Without `page` it's the plain array (up to 100) older clients expect. The first search in a new area imports real vets from OpenStreetMap in the background (`syncing: true` until done; refreshed weekly). Sample clinics from `npm run seed:clinics` only show where no real ones are known |
 | GET 🔒 | `/clinics/favorites` | The user's saved clinics |
 | PUT 🔒 | `/clinics/:id/favorite` | Save. Returns `{ favoriteClinicIds }` |
 | DELETE 🔒 | `/clinics/:id/favorite` | Unsave |
@@ -131,6 +131,17 @@ Uploaded files are served from `/uploads/<random-uuid>.<ext>`.
 | GET 🔒 | `/reminders/email-status` | `{ smtpConfigured }` |
 
 A daily job at 08:00 (server time) emails the digest to everyone with email reminders turned on.
+
+## PawPal assistant
+
+Both endpoints work signed out (general help) and signed in (answers from the owner's own records).
+With `ANTHROPIC_API_KEY` set, replies come from Claude; otherwise from built-in replies. Limited to 40
+messages per 10 minutes per IP.
+
+| Method | Path | Body | Description |
+|---|---|---|---|
+| GET | `/assistant/status` | | `{ mode: "claude" \| "built-in", signedIn, suggestions[] }` |
+| POST | `/assistant/chat` | `{ messages: [{ role: "user" \| "assistant", content }], petId?, date? }` | The conversation so far (last 20 kept, ending with the user; up to 2000 characters each). Streams newline-delimited JSON: `{ type: "text", text }` chunks, then `{ type: "done", source, actions: [{ label, to }] }` or `{ type: "error", message }` |
 
 ## Share links
 

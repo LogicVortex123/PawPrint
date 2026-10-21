@@ -31,4 +31,23 @@ const requireAuth = asyncHandler(async (req, res, next) => {
   next();
 });
 
+// For endpoints that work signed out too (the chat assistant): a valid token
+// sets req.userId, a missing or invalid one carries on as a guest. A database
+// error still fails the request, so a signed-in user is never silently a guest.
+const optionalAuth = asyncHandler(async (req, res, next) => {
+  const header = req.headers.authorization || '';
+  const token = header.startsWith('Bearer ') ? header.slice(7) : null;
+  let payload = null;
+  if (token) {
+    try {
+      payload = jwt.verify(token, jwtSecret);
+    } catch {
+      // expired or tampered — treat as a guest
+    }
+  }
+  if (payload && (await User.exists({ _id: payload.sub }))) req.userId = payload.sub;
+  next();
+});
+
 module.exports = requireAuth;
+module.exports.optionalAuth = optionalAuth;
