@@ -3,6 +3,7 @@ import { useSearchParams } from 'react-router-dom';
 import { Plus, Loader2, Syringe, Pill, Bell, Wallet } from 'lucide-react';
 import { useAppStore } from '../store/useAppStore';
 import { isDashboardTab, type DashboardTab } from '../lib/navigation';
+import { setBrowsingHome } from '../lib/storage';
 import { AddPetModal } from '../components/dashboard/AddPetModal';
 import { EditPetModal } from '../components/dashboard/EditPetModal';
 import { ShareDialog } from '../components/dashboard/ShareDialog';
@@ -102,6 +103,9 @@ export const Features: React.FC = () => {
     }, { replace: tab === activeTab });
     if (tab !== activeTab) window.scrollTo({ top: 0, behavior: 'smooth' });
   };
+
+  // Back on the dashboard: the home page redirects here again
+  useEffect(() => { setBrowsingHome(false); }, []);
 
   const pet = selectedPet();
 

@@ -4,6 +4,7 @@ import { MemoryRouter, Routes, Route } from 'react-router-dom';
 import { useAppStore } from '../store/useAppStore';
 import { useChatStore } from '../lib/chat';
 import { GuestRoute } from '../App';
+import { setBrowsingHome } from '../lib/storage';
 import { ChatWidget } from '../components/chat/ChatWidget';
 
 const future = { v7_startTransition: true, v7_relativeSplatPath: true };
@@ -30,6 +31,21 @@ describe('GuestRoute', () => {
     useAppStore.setState({ isAuthenticated: true });
     renderAt('/');
     expect(screen.getByText('Dashboard')).toBeInTheDocument();
+  });
+
+  it('lets a signed-in user see the home page after choosing "Home page"', () => {
+    useAppStore.setState({ isAuthenticated: true });
+    setBrowsingHome(true);
+    render(
+      <MemoryRouter initialEntries={['/']} future={future}>
+        <Routes>
+          <Route path="/" element={<GuestRoute allowBrowsing><p>Landing page</p></GuestRoute>} />
+          <Route path="/dashboard" element={<p>Dashboard</p>} />
+        </Routes>
+      </MemoryRouter>,
+    );
+    expect(screen.getByText('Landing page')).toBeInTheDocument();
+    setBrowsingHome(false);
   });
 
   it('honours a same-site ?redirect= but never an external one', () => {

@@ -1,10 +1,11 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { Link, useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 import {
-  Search, Menu, X, BarChart3, Settings as SettingsIcon, Siren, Plus, ChevronsUpDown, Check, MoreHorizontal,
+  Search, Menu, X, BarChart3, Settings as SettingsIcon, Siren, Plus, ChevronsUpDown, Check, MoreHorizontal, ArrowLeft,
 } from 'lucide-react';
 import { useAppStore } from '../../store/useAppStore';
 import { Brand, AccountMenu } from '../common/Navbar';
+import { setBrowsingHome } from '../../lib/storage';
 import { ThemeToggle } from '../common/ThemeToggle';
 import { ReminderBell } from '../common/ReminderBell';
 import { AddPetModal } from '../dashboard/AddPetModal';
@@ -226,6 +227,12 @@ export const AppShell: React.FC<{ children: React.ReactNode }> = ({ children }) 
         <header className="print:hidden sticky top-0 z-30 bg-paw-mist/85 dark:bg-paw-darkbg/85 backdrop-blur-md border-b border-paw-line/70 dark:border-paw-darkborder/70">
           <div className="flex items-center gap-3 h-16 px-4 sm:px-6 lg:px-8">
             <button onClick={() => setDrawerOpen(true)} className="icon-btn lg:hidden" aria-label="Open menu"><Menu className="w-5 h-5" /></button>
+            <Link to="/" onClick={() => setBrowsingHome(true)} title="Go to the home page" aria-label="Go to the home page"
+              className="group flex-shrink-0 inline-flex items-center gap-1.5 h-9 pl-2 pr-2 sm:pr-3.5 rounded-full border border-paw-line dark:border-paw-darkborder bg-white dark:bg-paw-darkcard text-sm font-bold text-paw-secondary dark:text-paw-warm-sage hover:text-paw-forest dark:hover:text-white hover:border-paw-forest dark:hover:border-paw-sage shadow-2xs transition-colors">
+              <ArrowLeft className="w-4 h-4 group-hover:-translate-x-0.5 transition-transform" />
+              <span className="hidden sm:inline">Home</span>
+            </Link>
+            <span className="hidden sm:block w-px h-6 bg-paw-line dark:bg-paw-darkborder flex-shrink-0" aria-hidden />
             {/* Keyed by title so the heading eases in when the section changes */}
             <div key={title} className="flex items-center gap-2.5 min-w-0 flex-1 animate-fadeIn">
               {section && <span className={`hidden sm:inline-flex w-8 h-8 rounded-xl items-center justify-center animate-pop ${TONES[section.tone].tile}`}><section.icon className="w-4 h-4" /></span>}

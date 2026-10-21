@@ -1,6 +1,7 @@
 import React, { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { Menu, X, LogOut, Search, Settings as SettingsIcon, LayoutDashboard, ChevronDown, ArrowRight } from 'lucide-react';
+import { Menu, X, LogOut, Search, Settings as SettingsIcon, LayoutDashboard, ChevronDown, ArrowRight, Home } from 'lucide-react';
+import { setBrowsingHome } from '../../lib/storage';
 import { ThemeToggle } from './ThemeToggle';
 import { ReminderBell } from './ReminderBell';
 import { useAppStore } from '../../store/useAppStore';
@@ -80,6 +81,9 @@ export const AccountMenu: React.FC<{ align?: 'left' | 'right'; up?: boolean }> =
           </div>
           <Link role="menuitem" to="/dashboard" onClick={() => setOpen(false)} className="flex items-center gap-2.5 px-3 py-2 rounded-xl text-sm font-semibold text-paw-dark dark:text-white hover:bg-paw-light-sage dark:hover:bg-paw-darksurface">
             <LayoutDashboard className="w-4 h-4 text-paw-forest dark:text-paw-sage" /> Dashboard
+          </Link>
+          <Link role="menuitem" to="/" onClick={() => { setBrowsingHome(true); setOpen(false); }} className="flex items-center gap-2.5 px-3 py-2 rounded-xl text-sm font-semibold text-paw-dark dark:text-white hover:bg-paw-light-sage dark:hover:bg-paw-darksurface">
+            <Home className="w-4 h-4 text-paw-forest dark:text-paw-sage" /> Home page
           </Link>
           <Link role="menuitem" to="/settings" onClick={() => setOpen(false)} className="flex items-center gap-2.5 px-3 py-2 rounded-xl text-sm font-semibold text-paw-dark dark:text-white hover:bg-paw-light-sage dark:hover:bg-paw-darksurface">
             <SettingsIcon className="w-4 h-4 text-paw-forest dark:text-paw-sage" /> Account settings

@@ -10,6 +10,7 @@ import { BackToTop, PawLoader, ScrollProgress, useSpotlightTracker } from './com
 import { Home } from './pages/Home';
 import { ChatWidget } from './components/chat/ChatWidget';
 import { useAppStore } from './store/useAppStore';
+import { isBrowsingHome } from './lib/storage';
 
 // Every page except the landing page is loaded on demand, so the first visit
 // downloads only what it shows (pages export named components)
@@ -67,11 +68,12 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
 }
 
 // Landing and sign-in pages are for visitors. Someone already signed in goes
-// straight to their dashboard (or the page a ?redirect= link asked for).
-export function GuestRoute({ children }: { children: React.ReactNode }) {
+// straight to their dashboard (or the page a ?redirect= link asked for) —
+// except on the home page when they chose "Home page" from inside the app.
+export function GuestRoute({ children, allowBrowsing = false }: { children: React.ReactNode; allowBrowsing?: boolean }) {
   const { isAuthenticated } = useAppStore();
   const { search } = useLocation();
-  if (!isAuthenticated) return <>{children}</>;
+  if (!isAuthenticated || (allowBrowsing && isBrowsingHome())) return <>{children}</>;
   const redirect = new URLSearchParams(search).get('redirect') || '';
   return <Navigate to={redirect.startsWith('/') && !redirect.startsWith('//') ? redirect : '/dashboard'} replace />;
 }
@@ -109,7 +111,7 @@ export const App: React.FC = () => {
         {/* Keyed by path so each page eases in when you navigate to it */}
         <div key={pathname} className="animate-page-in">
         <Routes>
-          <Route path="/" element={<GuestRoute><Home /></GuestRoute>} />
+          <Route path="/" element={<GuestRoute allowBrowsing><Home /></GuestRoute>} />
           <Route path="/dashboard" element={<ProtectedRoute><Features /></ProtectedRoute>} />
           <Route path="/features" element={<LegacyDashboardRedirect />} />
           <Route path="/about" element={<About />} />

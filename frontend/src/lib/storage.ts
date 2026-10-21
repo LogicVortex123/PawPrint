@@ -58,6 +58,28 @@ export function removeKey(key: string): void {
   }
 }
 
+// A signed-in user is normally sent from the home page to their dashboard.
+// Choosing "Home page" from the app sets this for the tab so they can look
+// around the public pages; opening the dashboard again clears it.
+const BROWSE_HOME_KEY = `${PREFIX}browse-home`;
+
+export function isBrowsingHome(): boolean {
+  try {
+    return sessionStorage.getItem(BROWSE_HOME_KEY) === '1';
+  } catch {
+    return false;
+  }
+}
+
+export function setBrowsingHome(on: boolean): void {
+  try {
+    if (on) sessionStorage.setItem(BROWSE_HOME_KEY, '1');
+    else sessionStorage.removeItem(BROWSE_HOME_KEY);
+  } catch {
+    // Without storage the home page just keeps redirecting to the dashboard
+  }
+}
+
 // Everything tied to the signed-in account: session, cached records, selected
 // pet, form drafts and recent searches. Theme and saved clinics are browser
 // preferences and stay. Called on logout and when the session expires.
@@ -73,4 +95,5 @@ export function clearAccountData(): void {
     // ignore
   }
   [StorageKeys.token, StorageKeys.user, StorageKeys.recordsCache, StorageKeys.selectedPet, StorageKeys.recentSearches, StorageKeys.notifiedReminders, StorageKeys.chat].forEach(removeKey);
+  setBrowsingHome(false);
 }
