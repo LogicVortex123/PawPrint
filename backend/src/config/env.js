@@ -1,6 +1,7 @@
 require('dotenv').config();
 
-// Only MONGO_URI and JWT_SECRET are truly required to boot.
+// MONGO_URI and JWT_SECRET are required in every environment.
+// Production also requires WEB_ORIGIN (see below).
 // GOOGLE_CLIENT_ID is only needed if you want the Google Sign-In endpoint to work.
 const required = ['MONGO_URI', 'JWT_SECRET'];
 
@@ -24,8 +25,33 @@ if (weakSecret && nodeEnv === 'development') {
 
 const webOrigins = (process.env.WEB_ORIGIN || '')
   .split(',')
-  .map((o) => o.trim())
+  .map((o) => o.trim().replace(/\/$/, ''))
   .filter(Boolean);
+
+// The browser sends this origin on every API call. Without it, production CORS
+// rejects the web app and the deployed site looks like a network failure.
+if (nodeEnv === 'production') {
+  if (webOrigins.length === 0) {
+    throw new Error('WEB_ORIGIN is required in production — set it to the web app origin, for example https://your-app.vercel.app');
+  }
+  for (const origin of webOrigins) {
+    if (origin === '*' || !/^https:\/\/[^/]+$/.test(origin)) {
+      throw new Error(`WEB_ORIGIN must be an https origin with no path (got ${origin})`);
+    }
+  }
+}
+
+// Render (and similar hosts) set X-Forwarded-For. express-rate-limit rejects
+// those requests unless Express trusts the proxy, so production defaults to
+// trusting the first hop. Set TRUST_PROXY=0 to turn that off.
+function resolveTrustProxy() {
+  const raw = process.env.TRUST_PROXY;
+  if (raw === undefined || raw.trim() === '') return nodeEnv === 'production' ? 1 : false;
+  if (raw === 'false' || raw === '0') return false;
+  if (raw === 'true') return 1;
+  const asNumber = Number(raw);
+  return Number.isNaN(asNumber) ? raw : asNumber;
+}
 
 module.exports = {
   port: Number(process.env.PORT) || 5000,
@@ -39,9 +65,10 @@ module.exports = {
   webOrigins,
   // Where links in emails (password reset, dashboard, shared records) point to
   appUrl: (process.env.APP_URL || webOrigins[0] || 'http://localhost:5173').replace(/\/$/, ''),
-  // Behind a host's load balancer (Render, Railway...) set TRUST_PROXY=1 so rate
-  // limits see the real client IP instead of the proxy's
-  trustProxy: process.env.TRUST_PROXY ? Number(process.env.TRUST_PROXY) || process.env.TRUST_PROXY : false,
+  trustProxy: resolveTrustProxy(),
+  // IANA timezone for the 08:00 reminder cron. Unset = the server's own clock
+  // (UTC on Render). Example: Asia/Kolkata
+  reminderCronTz: (process.env.REMINDER_CRON_TZ || '').trim(),
   // Import real vet clinics from OpenStreetMap for areas people search in
   clinicImport: process.env.CLINIC_IMPORT !== 'false' && nodeEnv !== 'test',
   // PawPal chat assistant. With an Anthropic API key it answers with Claude;

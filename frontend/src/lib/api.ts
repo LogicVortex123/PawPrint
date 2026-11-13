@@ -1,10 +1,15 @@
 // Tiny fetch wrapper so components don't need to deal with headers and error parsing.
-// All requests go to the backend base URL defined in VITE_API_URL (falls back to
-// localhost:5000 during development).
+// VITE_API_URL overrides the base URL. Production builds call the deployed API.
+// Local dev stays on localhost unless frontend/.env says otherwise.
 
 import { clearAccountData } from './storage';
 
-export const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+const DEPLOYED_API_URL = 'https://pawprint-2.onrender.com';
+
+// Trailing slashes would turn "/auth/login" into a double-slash URL.
+export const API_BASE_URL = (
+  import.meta.env.VITE_API_URL || (import.meta.env.PROD ? DEPLOYED_API_URL : 'http://localhost:5000')
+).replace(/\/$/, '');
 
 type RequestOptions = {
   method?: 'GET' | 'POST' | 'PUT' | 'DELETE' | 'PATCH';

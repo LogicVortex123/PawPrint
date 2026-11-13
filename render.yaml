@@ -1,30 +1,49 @@
 # Render blueprint for the PawPrint API (https://render.com/docs/blueprint-spec).
 # Secrets marked sync: false are entered in the Render dashboard, never committed.
+#
+# Free instances sleep after 15 minutes idle and wipe the local disk when they
+# sleep or redeploy. Pet photos survive only on a paid plan with a disk. Example:
+#   disk:
+#     name: pawprint-uploads
+#     mountPath: /var/data
+#     sizeGB: 1
+#   and UPLOAD_DIR=/var/data/uploads
 services:
   - type: web
     name: pawprint-api
     runtime: node
+    plan: free
     rootDir: backend
-    buildCommand: npm ci --omit=dev
+    # npm ci exits with the long "npm help ci" dump when the builder's npm is
+    # newer than the lockfile. npm install still uses the lockfile and continues.
+    buildCommand: if [ -f backend/package.json ]; then cd backend; fi && npm install --omit=dev
     startCommand: npm start
     healthCheckPath: /health
     envVars:
+      - key: NODE_VERSION
+        value: "22"
       - key: NODE_ENV
         value: production
+      # Trust the Render proxy so rate limits see the visitor IP.
       - key: TRUST_PROXY
         value: "1"
+      # 08:00 reminder emails use this clock. Change to Asia/Kolkata for IST.
+      - key: REMINDER_CRON_TZ
+        value: UTC
       - key: MONGO_URI
         sync: false
       - key: JWT_SECRET
         generateValue: true
+      # https://your-app.vercel.app — no path, no trailing slash. Comma-separate extras.
       - key: WEB_ORIGIN
-        sync: false # e.g. https://pawprint.vercel.app
+        sync: false
+      # Same origin as WEB_ORIGIN. Used for links inside emails.
       - key: APP_URL
         sync: false
       - key: GOOGLE_CLIENT_ID
         sync: false
       - key: ANTHROPIC_API_KEY
-        sync: false # optional — PawPal uses built-in replies without it
+        sync: false
       - key: EMAIL_USER
         sync: false
       - key: EMAIL_PASS

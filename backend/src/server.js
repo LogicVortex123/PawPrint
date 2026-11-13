@@ -2,14 +2,19 @@ const app = require('./app');
 const connectDB = require('./config/db');
 const { disconnectDB } = require('./config/db');
 const { port } = require('./config/env');
+const { ensureUploadsDir } = require('./config/uploads');
 const { startEmailReminderCron } = require('./services/emailReminder.service');
 
 async function start() {
   await connectDB();
+  const uploadsDir = ensureUploadsDir();
   startEmailReminderCron();
 
-  const server = app.listen(port, () => {
-    console.log(`PawPrint backend running on port ${port}`);
+  // Render's proxy reaches the process on all interfaces, on the PORT it assigns.
+  const host = '0.0.0.0';
+  const server = app.listen(port, host, () => {
+    console.log(`PawPrint backend running on http://${host}:${port}`);
+    console.log(`Uploads directory: ${uploadsDir}`);
   });
 
   server.on('error', (err) => {

@@ -17,7 +17,7 @@ const { localDateKey } = require('./medicationSchedule.service');
 const { sendMail, isConfigured } = require('./email.service');
 const { buildReminderEmail, buildAppointmentEmail } = require('./emailTemplates.service');
 const { buildAppointmentIcs } = require('./ics.service');
-const { email: emailCfg } = require('../config/env');
+const { email: emailCfg, reminderCronTz } = require('../config/env');
 
 /**
  * Send digest emails to opted-in users.
@@ -113,7 +113,9 @@ function startEmailReminderCron() {
     console.warn('[email-reminders] No Gmail/SMTP login in backend/.env (EMAIL_USER / EMAIL_PASS) — emails will NOT reach real inboxes. In development each email gets a preview link in this log instead.');
   }
 
-  // Every day at 08:00 AM server time
+  // Every day at 08:00. Timezone comes from REMINDER_CRON_TZ; otherwise the
+  // server clock (UTC on Render).
+  const options = reminderCronTz ? { timezone: reminderCronTz } : undefined;
   cron.schedule('0 8 * * *', async () => {
     console.log('[email-reminders] Daily cron triggered');
     try {
@@ -121,9 +123,9 @@ function startEmailReminderCron() {
     } catch (err) {
       console.error('[email-reminders] Daily run failed:', err.message);
     }
-  });
+  }, options);
 
-  console.log('[email-reminders] Daily reminder cron scheduled for 08:00 AM');
+  console.log(`[email-reminders] Daily reminder cron scheduled for 08:00 (${reminderCronTz || 'server local time'})`);
 }
 
 module.exports = { startEmailReminderCron, runEmailReminders, sendAppointmentEmail };

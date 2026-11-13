@@ -273,7 +273,7 @@ The mobile app remains functional even without an internet connection.
 
 # 🚀 Getting Started (Web + Backend)
 
-**Prerequisites:** Node.js 18+ and a MongoDB database (a free MongoDB Atlas cluster or a local `mongod`).
+**Prerequisites:** Node.js 22+ and a MongoDB database (a free MongoDB Atlas cluster or a local `mongod`).
 
 ```bash
 # 1. Backend
@@ -364,8 +364,10 @@ PawPrint/
 │   │   ├── types/               Shared TypeScript types
 │   │   └── test/                Test setup and component tests
 │   ├── public/images/           Pet photography used across the app
-│   ├── vercel.json              Vercel hosting (SPA routing, caching, headers)
+│   ├── vercel.json              Vercel config when the project root is frontend/
 │   └── public/_redirects        Netlify SPA routing
+├── vercel.json                  Vercel config when the repo root is the project root
+├── package.json                 Builds the web app from the repo root
 └── render.yaml                  Render blueprint for the backend
 ```
 
@@ -677,21 +679,39 @@ The product is intended to support:
 * iOS (mobile)
 * Web (modern browsers)
 
-Mobile production builds are generated using **EAS Build**.
+Mobile production builds are generated using **EAS Build**. The web dashboard and the API deploy separately. Use **Node.js 22** on both hosts (`.nvmrc`, and `NODE_VERSION` in `render.yaml`).
 
-**Web app → Vercel or Netlify.** Set the project root to `frontend/` and the environment
-variable `VITE_API_URL` to the deployed API URL. `frontend/vercel.json` and
-`frontend/public/_redirects` already route every path to the app, so links like `/settings`
-or `/share/…` work on refresh.
+### Backend → Render
 
-**Backend → Render.** `render.yaml` is a ready blueprint: it builds `backend/`, checks `/health`,
-generates a strong `JWT_SECRET`, and asks for `MONGO_URI`, `WEB_ORIGIN` (the web app's URL, for
-CORS), `APP_URL` (used in email links) and the optional email/Google settings. In production the
-server refuses to start with a weak `JWT_SECRET`.
+1. Push this repository to GitHub.
+2. In Render, choose **New → Blueprint** and select the repo. `render.yaml` creates the `pawprint-api` web service from `backend/`: `npm install --omit=dev`, `npm start`, health check on `/health`.
+3. Fill in the prompted secrets:
+   * `MONGO_URI` — MongoDB Atlas connection string. In Atlas → **Network Access**, allow `0.0.0.0/0`, because Render’s outbound address changes.
+   * `WEB_ORIGIN` — the Vercel site origin, exactly `https://your-app.vercel.app` (https, no path, no trailing slash). Add more origins separated by commas if you need them.
+   * `APP_URL` — the same web origin. Password-reset and appointment emails link here.
+   * Google, Anthropic, and email values are optional. PawPal and sign-in still work without them; mail is skipped until SMTP is set.
+4. `JWT_SECRET` is generated for you. Production refuses to boot with a missing `WEB_ORIGIN`, a non-https origin, or a short secret. The process listens on `0.0.0.0` and on Render’s `PORT`.
+5. In Atlas, the database user in `MONGO_URI` needs read/write on the `pawprint` database.
 
-> Uploaded photos and documents are stored on the server's disk (`backend/uploads/`). On hosts
-> with temporary disks (like Render's free tier) attach a persistent disk, or move uploads to
-> cloud storage.
+The daily reminder job runs at 08:00 in `REMINDER_CRON_TZ` (the blueprint sets `UTC`). Change that variable to `Asia/Kolkata` if 8:00 should mean India time. Free instances sleep when idle, so the clock only fires while the service is awake.
+
+Uploaded photos and documents go to `backend/uploads/`. A free instance deletes that disk when it sleeps or redeploys. To keep files, move the service to a paid plan, attach a disk mounted at `/var/data`, and set `UPLOAD_DIR=/var/data/uploads`.
+
+### Web app → Vercel
+
+Import the same GitHub repository. Either leave the root directory as the repository root (the root `vercel.json` builds `frontend/`) or set **Root Directory** to `frontend` (`frontend/vercel.json` is the same setup).
+
+Before the first production build, set:
+
+| Variable | Value |
+| --- | --- |
+| `VITE_API_URL` | `https://pawprint-2.onrender.com` — https, no trailing slash. Production builds use this URL when the variable is unset. |
+
+Vite inlines that variable at build time. A Vercel build stops if it is missing or still points at localhost, so the live site cannot silently call your laptop.
+
+Then set Render’s `WEB_ORIGIN` (and `APP_URL`) to the Vercel origin, including `https://`. Add that same origin under the Google OAuth client’s **Authorized JavaScript origins** if you use Google sign-in.
+
+Refresh works on `/settings`, `/share/…`, and the other client routes. Hashed files under `/assets` are cached for a year; `index.html` is not. `frontend/public/_redirects` covers the same routing on Netlify.
 
 ---
 

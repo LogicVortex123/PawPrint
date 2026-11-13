@@ -1,6 +1,6 @@
 # PawPrint API reference
 
-Base URL: `http://localhost:5000` in development (set `VITE_API_URL` in the web app).
+Base URL: `http://localhost:5000` in development, `https://pawprint-2.onrender.com` in production.
 All bodies are JSON unless noted. Errors always look like:
 
 ```json

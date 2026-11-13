@@ -94,7 +94,8 @@ public/images/            Pet photography
 
 ## 🌍 Deploy
 
-Deploy the `frontend/` folder to **Vercel** or **Netlify** and set `VITE_API_URL` to the live API.
-`vercel.json` and `public/_redirects` send every path to the app, so links like `/settings` work
-on refresh. Add the live web address to the Google OAuth client's Authorized JavaScript origins
-and to the backend's `WEB_ORIGIN`.
+**Vercel.** Import the repo and either leave the root as the repository root or set **Root Directory** to `frontend`. Production builds call `https://pawprint-2.onrender.com`. Set `VITE_API_URL` to that same address (no trailing slash) if you want it explicit; a localhost value fails the build because Vite bakes it into the bundle. `vercel.json` sends every path to the app and does not cache `index.html`.
+
+**Netlify.** Publish `frontend/` (`public/_redirects` covers client-side routes) with the same `VITE_API_URL`.
+
+Add the live site origin to the Google OAuth client's Authorized JavaScript origins and to the backend `WEB_ORIGIN` (`https://…`, no trailing slash). See the main README for the Render blueprint.

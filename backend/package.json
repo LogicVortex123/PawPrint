@@ -36,7 +36,10 @@
     "supertest": "^7.0.0"
   },
   "engines": {
-    "node": ">=18"
+    "node": ">=22"
+  },
+  "allowScripts": {
+    "bcrypt@5.1.1": true
   },
   "jest": {
     "testEnvironment": "node",

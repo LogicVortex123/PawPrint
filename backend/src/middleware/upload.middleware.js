@@ -2,12 +2,12 @@ const multer = require('multer');
 const path = require('path');
 const crypto = require('crypto');
 const ApiError = require('../utils/ApiError');
+const { ensureUploadsDir } = require('../config/uploads');
 
 // TR-010: backs pet photo and medical document uploads. Stores to local disk
-// for this project's scope; swap the storage engine for cloud storage without
-// touching controllers if that becomes necessary.
+// (or UPLOAD_DIR, when a host provides a persistent disk).
 const storage = multer.diskStorage({
-  destination: path.join(__dirname, '..', '..', 'uploads'),
+  destination: (req, file, cb) => cb(null, ensureUploadsDir()),
   filename: (req, file, cb) => {
     const unique = crypto.randomUUID();
     cb(null, `${unique}${path.extname(file.originalname)}`);

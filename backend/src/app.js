@@ -1,10 +1,10 @@
 const express = require('express');
 const cors = require('cors');
 const morgan = require('morgan');
-const path = require('path');
 const mongoose = require('mongoose');
 
 const corsOptions = require('./config/cors');
+const { ensureUploadsDir } = require('./config/uploads');
 const { isProduction, isTest, trustProxy } = require('./config/env');
 const routes = require('./routes');
 const notFound = require('./middleware/notFound.middleware');
@@ -26,7 +26,7 @@ app.use(sanitizeInput);
 
 // Serve uploaded pet photos and documents from disk. File names are random
 // UUIDs, and nosniff stops a browser from treating an upload as another type.
-app.use('/uploads', express.static(path.join(__dirname, '..', 'uploads'), {
+app.use('/uploads', express.static(ensureUploadsDir(), {
   maxAge: '7d',
   setHeaders: (res) => res.setHeader('X-Content-Type-Options', 'nosniff'),
 }));

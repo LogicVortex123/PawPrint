@@ -1,0 +1,13 @@
+{
+  "name": "pawprint",
+  "private": true,
+  "description": "PawPrint — web dashboard on Vercel, API on Render. App code lives in frontend/ and backend/.",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "build": "npm run build --prefix frontend",
+    "dev:web": "npm run dev --prefix frontend",
+    "dev:api": "npm run dev --prefix backend"
+  }
+}
