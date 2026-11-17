@@ -113,9 +113,10 @@ export function DataProvider({ children }: { children: ReactNode }) {
     const subscription = NetInfo.addEventListener((state) => {
       const connected = Boolean(state.isConnected && state.isInternetReachable !== false);
       setOnline(connected);
+      if (connected) void sync();
     });
     return () => subscription();
-  }, []);
+  }, [sync]);
 
   useEffect(() => {
     if (!user) {

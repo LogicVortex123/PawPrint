@@ -34,6 +34,7 @@ async function scheduleAt(id: string, title: string, body: string, when: Date, t
 }
 
 export async function scheduleVaccinationReminder(record: Vaccination, petName: string) {
+  if (Platform.OS === 'web') return;
   await Notifications.cancelScheduledNotificationAsync(`vax-${record.localId}`).catch(() => undefined);
   const prefs = await getNotificationPrefs();
   if (!prefs.vaccination || record.deleted) return;
@@ -50,6 +51,7 @@ export async function scheduleVaccinationReminder(record: Vaccination, petName: 
 }
 
 export async function scheduleAppointmentReminders(record: Appointment, petName: string) {
+  if (Platform.OS === 'web') return;
   await Notifications.cancelScheduledNotificationAsync(`appt-${record.localId}-before`).catch(() => undefined);
   await Notifications.cancelScheduledNotificationAsync(`appt-${record.localId}-day`).catch(() => undefined);
   const prefs = await getNotificationPrefs();
@@ -67,6 +69,7 @@ export async function scheduleAppointmentReminders(record: Appointment, petName:
 }
 
 export async function notifySyncFinished(failed: number) {
+  if (Platform.OS === 'web') return;
   const prefs = await getNotificationPrefs();
   if (!prefs.sync) return;
   if (!(await ensurePermission())) return;
