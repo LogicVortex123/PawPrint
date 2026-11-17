@@ -1,8 +1,11 @@
 # Dependencies
 frontend/node_modules/
+mobile/node_modules/
 
 # Build output
 frontend/dist/
+mobile/dist/
+mobile/.expo/
 
 # Vite
 frontend/.vite/
@@ -11,6 +14,10 @@ frontend/.vite/
 frontend/.env
 frontend/.env.*
 !frontend/.env.example
+mobile/.env
+mobile/.env.*
+!mobile/.env.example
+mobile/.claude/
 
 # Local files
 *.local

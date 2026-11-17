@@ -1,0 +1,63 @@
+{
+  "expo": {
+    "name": "PawPrint",
+    "slug": "pawprint",
+    "scheme": "pawprint",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "automatic",
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.pawprint.app",
+      "infoPlist": {
+        "NSCameraUsageDescription": "PawPrint uses the camera for pet photos and medical documents.",
+        "NSPhotoLibraryUsageDescription": "PawPrint uses your photos for pet profiles and medical documents.",
+        "NSLocationWhenInUseUsageDescription": "PawPrint uses your location to list nearby vet clinics.",
+        "NSFaceIDUsageDescription": "PawPrint uses Face ID to lock your pets' health records."
+      }
+    },
+    "android": {
+      "package": "com.pawprint.app",
+      "usesCleartextTraffic": true,
+      "adaptiveIcon": {
+        "backgroundColor": "#1F6B53",
+        "foregroundImage": "./assets/android-icon-foreground.png",
+        "backgroundImage": "./assets/android-icon-background.png",
+        "monochromeImage": "./assets/android-icon-monochrome.png"
+      }
+    },
+    "web": {
+      "favicon": "./assets/favicon.png"
+    },
+    "plugins": [
+      "expo-sqlite",
+      "expo-secure-store",
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "PawPrint uses your photos for pet profiles and medical documents.",
+          "cameraPermission": "PawPrint uses the camera for pet photos and medical documents."
+        }
+      ],
+      [
+        "expo-location",
+        {
+          "locationWhenInUsePermission": "PawPrint uses your location to list nearby vet clinics."
+        }
+      ],
+      [
+        "expo-notifications",
+        {
+          "color": "#1F6B53"
+        }
+      ],
+      [
+        "expo-local-authentication",
+        {
+          "faceIDPermission": "PawPrint uses Face ID to lock your pets' health records."
+        }
+      ]
+    ]
+  }
+}

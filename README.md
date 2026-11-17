@@ -33,7 +33,7 @@ The application allows users to manage **pet profiles, vaccination records, weig
 
 When the mobile device reconnects to the internet, locally stored changes are automatically synchronized with the cloud backend — the same backend the web dashboard talks to directly.
 
-> **This repository** contains the shared **backend** (`backend/`) and the **web app** (`frontend/`).
+> **This repository** contains the shared **backend** (`backend/`), the **web app** (`frontend/`), and the **mobile app** (`mobile/`).
 
 ---
 
@@ -290,6 +290,17 @@ npm install
 npm run dev                 # http://localhost:5173 (always this port — see below)
 ```
 
+**3. Mobile app (optional, third terminal)**
+
+```bash
+cd mobile
+cp .env.example .env        # EXPO_PUBLIC_API_URL=http://localhost:5000
+npm install
+npx expo start              # scan the QR code with Expo Go
+```
+
+The phone app stores pets, vaccinations, weight, appointments and documents in SQLite first, then syncs them to the same API when the phone is online. A physical phone cannot use `localhost` for the API: set `EXPO_PUBLIC_API_URL` to your computer’s LAN address, or leave it unset to use `https://pawprint-2.onrender.com`.
+
 Run **one** backend terminal and **one** frontend terminal. The web app always runs on
 port **5173** (`strictPort` in `vite.config.ts`): if 5173 is busy it stops with an error instead
 of quietly moving to 5174, because Google Sign-In only works on registered addresses. In
@@ -345,6 +356,9 @@ PawPrint/
 │   └── tests/
 │       ├── unit/                Pure business-rule tests
 │       └── integration/         Real HTTP requests against an in-memory MongoDB
+├── mobile/                      Expo (React Native) app — offline SQLite, then sync
+│   ├── App.tsx                  Providers and navigation root
+│   └── src/                     Screens, SQLite, sync engine, Zustand-style stores
 ├── frontend/                    React + Vite web app
 │   ├── src/
 │   │   ├── pages/               One file per route (lazy-loaded)
